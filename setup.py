@@ -2,9 +2,6 @@ from setuptools import setup, find_packages
 import subprocess
 
 
-def install_chromium():
-    subprocess.run(['playwright', 'install', 'chromium'])
-
 
 def readme():
     with open('README.md', 'r') as f:
@@ -30,4 +27,3 @@ setup(
     python_requires='>=3.7'
 )
 
-install_chromium()

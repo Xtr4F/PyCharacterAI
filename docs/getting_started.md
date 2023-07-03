@@ -5,8 +5,11 @@ First, you need to install the library:
 ```bash
 pip install PyCharacterAI
 ```
-> the library automatically downloads the chromium version you need for it to work
 
+Then install `chromium`
+```bash
+playwright install chromium
+```
 
 
 \
