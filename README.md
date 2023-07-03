@@ -76,3 +76,6 @@ async def main():
 
 asyncio.run(main())
 ```
+
+## Documentation
+The library has [documentation](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/welcome.md).
