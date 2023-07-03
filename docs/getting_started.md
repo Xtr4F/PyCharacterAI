@@ -107,13 +107,13 @@ asyncio.run(main())
 View the `Client` and `Chat` sections to get an idea of all available methods.
 
 ## 📖:
-- Welcome 
-- Getting started <- `(You're here.)`
+- [Welcome](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/welcome.md) 
+- [Getting started](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/getting_started.md) <- `(You're here.)`
 - API Reference:
-  - Client
-  - Chat 
+  - [Client](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/api_reference/client.md)
+  - [Chat](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/api_reference/chat.md)
   - Messages:
-    - Message
-    - Reply
-    - MessageHistory
+    - [Message](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/api_reference/messages/message.md)
+    - [Reply](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/api_reference/messages/reply.md)
+    - [MessageHistory](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/api_reference/messages/message_history.md)
 

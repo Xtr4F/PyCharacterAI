@@ -145,12 +145,12 @@
 
 
 ## 📖:
-- Welcome 
-- Getting started
+- [Welcome](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/welcome.md) 
+- [Getting started](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/getting_started.md)
 - API Reference:
-  - Client
-  - Chat <- `(You're here.)`
+  - [Client](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/api_reference/client.md)
+  - [Chat](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/api_reference/chat.md) <- `(You're here.)`
   - Messages:
-    - Message
-    - Reply
-    - MessageHistory
+    - [Message](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/api_reference/messages/message.md)
+    - [Reply](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/api_reference/messages/reply.md)
+    - [MessageHistory](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/api_reference/messages/message_history.md)
