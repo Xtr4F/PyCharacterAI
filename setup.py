@@ -1,6 +1,4 @@
 from setuptools import setup, find_packages
-import subprocess
-
 
 
 def readme():
@@ -10,7 +8,7 @@ def readme():
 
 setup(
     name='PyCharacterAI',
-    version='1.0.1',
+    version='1.0.2',
     author='XtraF',
     author_email='igoromarov15@gmail.com',
     description='An unofficial asynchronous api wrapper for Character AI',
@@ -19,7 +17,8 @@ setup(
     url='https://github.com/Xtr4F/PyCharacterAI',
     packages=find_packages(),
     install_requires=['playwright>=1.35.0 ',
-                      'uuid>=1.30'],
+                      'uuid>=1.30',
+                      'requests'],
     classifiers=[
         'Programming Language :: Python :: 3.10',
         'License :: OSI Approved :: MIT License'

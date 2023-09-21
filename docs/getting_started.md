@@ -100,7 +100,7 @@ async def main():
         message = input(f'{username}: ')  # In: Hi!
 
         answer = await chat.send_message(message)
-        print(f"Character: {answer.text}")  # Out: hello there! what kind of question you gonna ask me ? i'm here to assist you :)
+        print(f"{answer.src_character_name}: {answer.text}")  # Out: hello there! what kind of question you gonna ask me ? i'm here to assist you :)
 
 
 asyncio.run(main())

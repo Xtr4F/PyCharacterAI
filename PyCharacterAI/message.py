@@ -1,10 +1,10 @@
 class OutgoingMessage:
     def __init__(self, chat, options: dict):
         payload = {
-            "history_external_id": chat.history_id,
-            "character_external_id": chat.character_id,
+            "history_external_id": options.get("history_external_id", chat.history_id),
+            "character_external_id": options.get("character_external_id", chat.character_id),
             "text": options.get("text", ""),
-            "tgt": chat.ai_id,
+            "tgt": options.get("tgt", chat.ai_id),
             "ranking_method": options.get("ranking_method", 'random'),
             "faux_chat": options.get("faux_chat", False),
             "staging": options.get("staging", False),
@@ -25,6 +25,7 @@ class OutgoingMessage:
             "stream_every_n_steps": options.get("stream_every_n_steps", 16),
             "chunks_to_pad": options.get("chunks_to_pad", 8),
             "is_proactive": options.get("is_proactive", False),
+            "give_room_introductions": options.get("give_room_introductions", True),
 
             "image_rel_path": options.get("image_rel_path", ""),
             "image_description": options.get("image_description", ""),
@@ -36,6 +37,9 @@ class OutgoingMessage:
             payload['primary_msg_uuid'] = options.get("primary_msg_uuid", None)
             payload['seen_msg_uuids'] = [options.get("primary_msg_uuid", None)]
 
+        if not options.get("unsanitized_characters", None) is None:
+            payload["unsanitized_characters"] = options.get("unsanitized_characters", None)
+
         self.payload = payload
 
     def get_payload(self):
@@ -44,7 +48,6 @@ class OutgoingMessage:
 
 class Message:
     def __init__(self, chat, options):
-
         self.chat = chat
         self.raw_options = options
 
@@ -78,22 +81,23 @@ class Reply:
         reply_options = options.get('replies', [{}])[0]
         self.text = reply_options.get('text', None)
         self.id = reply_options.get('id', None)
-        self.uuid = reply_options.get('replies', [{}])[0].get('uuid', None)
+        self.uuid = reply_options.get('uuid', None)
 
         self.image_relative_path = reply_options.get('image_rel_path', None)
 
-        src_char_dict = options.get('src_char', None)
+        src_char_dict = options.get('src_char', {})
         self.src_character_name = src_char_dict.get('participant', {}).get('name', None)
         self.src_avatar_file_name = src_char_dict.get('avatar_file_name', None)
 
         self.is_final_chunk = options.get('is_final_chunk', False) if not self.is_aborted else False
         self.last_user_message_id = options.get('last_user_msg_id', None)
-
-    def __repr__(self):
-        return self.text
+        self.last_user_msg_uuid = options.get('last_user_msg_uuid', None)
 
     async def get_message(self):
         return await self.chat.get_message(self.uuid)
+
+    async def rate(self, rate: int):
+        return await self.chat.rate_answer(rate, self.uuid)
 
 
 class MessageHistory:

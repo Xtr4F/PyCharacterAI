@@ -11,6 +11,7 @@
 | Parameters | Description |
 | --- | --- |
 | (*optional*) **page_num** : `int` = `None` | *page number* |
+| (*optional*) **history_id** : `str` = `None` | *you can specify any `history_id` you want, not just the one linked to the chat.*|
 
 **Returns** `MessageHistory`
 
@@ -23,10 +24,6 @@
 
 **Returns** `list` 
 
-## async `start_new_chat()`
-> Starts a new chat with character 
-
-**Returns** `dict`
 
 
 ## async `send_to_character()`
@@ -63,31 +60,24 @@
 **Returns** `Reply`
 
 
-## async `generate_image()`
-> Generates an image based on the `prompt`
+## async `rate_answer()`
+> Rates the character's response
 
 | Parameters | Description |
 | --- | --- |
-| **prompt** : `str` | *Prompt for generating an image* |
-
-**Returns** `str` (*link to the image on the Character AI server*)
-
-
-## async `change_to_conversation()`
-> Changes the current conversation to another
-
-| Parameters | Description |
-| --- | --- |
-| **history_id** : `str` | *id of the history (`history_external_id`) to which you want to switch* |
-| **force** : `bool` = `False` | *If True, it changes the id of the history, whether or not it exists. May raise an exception* |
+| **rate** : `int` | *Number from 0 to 4 (number of stars).* **4 - Fantastic, 3 - Good, 2 - Bad, 1 - Terrible, 0 - Undo rate** |
+| **message_uuid** : `str` | *The uuid of the message to be rated. (For character messages only)* |
+| (*optional*) **history_id** : `str` = `None` | *you can specify any `history_id` you want, not just the one linked to the chat.*|
 
 **Returns** `bool`
+
 
 ## async `get_message()`
 
 | Parameters | Description |
 | --- | --- |
 | **message_uuid** : `str` | *The uuid of the message you want to get* |
+| (*optional*) **history_id** : `str` = `None` | *you can specify any `history_id` you want, not just the one linked to the chat.*|
 
 **Returns** `Message` | `None`
 
@@ -97,6 +87,7 @@
 | Parameters | Description |
 | --- | --- |
 | **message_uuid** : `str` | *uuid of the start message* |
+| (*optional*) **history_id** : `str` = `None` | *you can specify any `history_id` you want, not just the one linked to the chat.*|
 | **only_uuids** : `bool` = `True` | *if `True`, it returns a list of only messages `uuid`, and if `False`, it returns a list of messages*|
 
 **Returns** `list[Message | str] | None`
@@ -107,7 +98,8 @@
 | Parameters | Description |
 | --- | --- |
 | **message_uuid** : `str` | *uuid of the start message* |
-| ** get_previous** : `bool` = `False` | *if True, adds the previous message to the list too* | 
+| (*optional*) **history_id** : `str` = `None` | *you can specify any `history_id` you want, not just the one linked to the chat.*|
+| **get_previous** : `bool` = `False` | *if True, adds the previous message to the list too* |
 | **only_uuids** : `bool` = `True` | *if `True`, it returns a list of only messages `uuid`, and if `False`, it returns a list of messages*|
 
 **Returns** `list[Message | str] | None`
@@ -119,6 +111,7 @@
 | Parameters | Description |
 | --- | --- |
 | **message_uuid** : `str` | *uuid of the start message* |
+| (*optional*) **history_id** : `str` = `None` | *you can specify any `history_id` you want, not just the one linked to the chat.*|
 | **only_uuids** : `bool` = `True` | *if `True`, it returns only the message `uuid`, and if `False`, it returns the `message`*|
 
 **Returns** `Message | str | None`
@@ -130,6 +123,7 @@
 | Parameters | Description |
 | --- | --- |
 | **message_uuids** : `list` | *List of uuid messages that you want to delete* |
+| (*optional*) **history_id** : `str` = `None` | *you can specify any `history_id` you want, not just the one linked to the chat.*|
 
 **Returns** `bool`
 
@@ -140,6 +134,7 @@
 | Parameters | Description |
 | --- | --- |
 | **message_uuid** : `str` | *uuid of the message you want to delete* |
+| (*optional*) **history_id** : `str` = `None` | *you can specify any `history_id` you want, not just the one linked to the chat.*|
 
 **Returns** `bool`
 

@@ -14,6 +14,7 @@
 | **src_avatar_file_name** |
 | **is_final_chunk** |
 | **last_user_message_id** |
+| **last_user_msg_uuid** |
 
 
 

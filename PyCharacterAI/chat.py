@@ -1,27 +1,29 @@
 import json
-from typing import Any, Dict, Literal, Optional, Union
 
 from PyCharacterAI.message import Message, MessageHistory, OutgoingMessage, Reply
 
 
 class Chat:
     def __init__(self, client, character_id: str, continue_body: dict):
-        self.character_id = character_id
+        self.chat_type = continue_body.get("type")
+
+        self.character_id = character_id if not self.chat_type == "ROOM" else None
         self.history_id = continue_body.get('external_id')
 
         self.client = client
 
         ai = next(participant for participant in continue_body.get('participants') if not participant['is_human'])
 
-        self.ai_id = ai['user']['username']
+        self.ai_id = ai['user']['username'] if not self.chat_type == "ROOM" else None
         self.requester = client.requester
 
-    async def fetch_history(self, page_num: int = None) -> MessageHistory:
+    async def fetch_history(self, page_num: int = None, history_id: str = None) -> MessageHistory:
         if not self.client.is_authenticated():
             raise Exception('You must be authenticated to do this.')
 
         page_string = f"&page_num={page_num}" if page_num else ""
-        url = f"https://beta.character.ai/chat/history/msgs/user/?history_external_id={self.history_id}{page_string}"
+
+        url = f"https://beta.character.ai/chat/history/msgs/user/?history_external_id={history_id if history_id else self.history_id}{page_string}"
 
         request = await self.requester.request(url, options={
             "headers": self.client.get_headers()
@@ -66,28 +68,7 @@ class Chat:
 
         raise Exception('Failed to fetch stories')
 
-    async def start_new_chat(self) -> dict:
-        if not self.client.is_authenticated():
-            raise Exception('You must be authenticated to do this.')
-
-        request = await self.requester.request('https://beta.character.ai/chat/history/create/', options={
-            "method": 'POST',
-            "headers": self.client.get_headers(),
-            "body": json.dumps({
-                "character_external_id": self.character_id
-            })
-        })
-
-        if request.status == 200:
-            response = await request.json()
-
-            self.history_id = response.get('external_id', self.history_id)
-
-            return response
-
-        raise Exception('Failed creating new chat.')
-
-    async def send_to_character(self, options: dict) -> Reply:
+    async def send_to_character(self, options: dict) -> Reply | None:
         if not self.client.is_authenticated():
             raise Exception('You must be authenticated to do this.')
 
@@ -111,12 +92,14 @@ class Chat:
                 messages.append(Reply(chat=self, options=response))
 
             if len(messages) == 0:
-                return []
+                if response.get("abort", False):
+                    return Reply(chat=self, options=response)
+                return None
 
             return messages.pop()
         raise Exception('Failed sending request to character.')
 
-    async def send_message(self, text: str = "", primary_msg_uuid=None, image_path=None, image_description=None) -> Reply:
+    async def send_message(self, text: str = "", primary_msg_uuid=None, image_path=None, image_description=None) -> Reply | None:
         options = {
             "text": text
         }
@@ -134,45 +117,55 @@ class Chat:
     async def another_response(self, parent_msg_uuid) -> Reply:
         return await self.send_to_character(options={'parent_msg_uuid': parent_msg_uuid})
 
-    async def generate_image(self, prompt: str) -> str:
+    async def rate_answer(self, rate: int, message_uuid: str, history_id: str = None) -> bool:
+        r"""Rates the character's response
+            :param history_id:
+            :param message_uuid:
+            :param rate: Number from 0 to 4 (number of stars)
+
+            4 - Fantastic
+            3 - Good
+            2 - Bad
+            1 - Terrible
+            0 - Undo rate
+        """
         if not self.client.is_authenticated():
             raise Exception('You must be authenticated to do this.')
 
-        request = await self.requester.request('https://beta.character.ai/chat/generate-image/', options={
-            "method": 'POST',
+        if rate > 4 or rate < 0:
+            raise Exception('The rate should be between 1 and 4.')
+
+        label_ids = [235, 238, 241, 244]
+
+        match rate:
+            case 4:
+                label_ids = [235, 238, 241, 243]
+            case 3:
+                label_ids = [235, 238, 240, 244]
+            case 2:
+                label_ids = [235, 237, 241, 244]
+            case 1:
+                label_ids = [234, 238, 241, 244]
+            case 0:
+                label_ids = [235, 238, 241, 244]
+
+        payload = {"message_uuid": message_uuid, "history_external_id": self.history_id if not history_id else history_id, "label_ids": label_ids, "admin_override": False}
+
+        request = await self.requester.request("https://beta.character.ai/chat/annotations/label/", options={
+            "method": "PUT",
             "headers": self.client.get_headers(),
-            "body": json.dumps({"image_description": prompt})
+            "body": json.dumps(payload)
         })
 
         if request.status == 200:
-            response = await request.json()
+            return True
+        return False
 
-            return response.get('image_rel_path', '')
-
-        raise Exception('Failed generating image.')
-
-    async def change_to_conversation(self, history_id: str, force: bool = False) -> bool:
+    async def get_message(self, message_uuid: str, history_id: str = None) -> Message | None:
         if not self.client.is_authenticated():
             raise Exception('You must be authenticated to do this.')
 
-        if force:
-            self.history_id = history_id
-        else:
-            conversations = await self.get_histories()
-
-            for i in range(len(conversations)):
-                conversation = conversations[i]
-                if conversation.get('external_id', '') == history_id:
-                    self.history_id = history_id
-                    return True
-
-            raise Exception("Could not switch to conversation, it either doesn't exist or is invalid.")
-
-    async def get_message(self, message_uuid: str) -> Message | None:
-        if not self.client.is_authenticated():
-            raise Exception('You must be authenticated to do this.')
-
-        history = await self.fetch_history()
+        history = await self.fetch_history(history_id)
         history_messages = history.messages
 
         for i in range(len(history_messages)):
@@ -183,21 +176,18 @@ class Chat:
 
         return None
 
-    async def get_following_messages(self, message_uuid: str, only_uuids: bool = True) -> list[Message | str] | None:
+    async def get_following_messages(self, message_uuid: str, history_id: str = None, only_uuids: bool = True) -> list[Message | str] | None:
         messages = []
 
-        start_message: Message = await self.get_message(message_uuid)
+        start_message: Message = await self.get_message(message_uuid, history_id)
         if start_message is None:
             return None
 
-        history = await self.fetch_history()
+        history = await self.fetch_history(history_id)
         history_messages = history.messages
-
-        print(len(history_messages))
 
         if len(history_messages) > start_message.pos_in_history:
             for i in range(start_message.pos_in_history, len(history_messages) + 1):
-                print(i)
                 message = history_messages[i - 1]
                 messages.append(message)
 
@@ -212,14 +202,14 @@ class Chat:
         else:
             return messages
 
-    async def get_related_messages(self, message_uuid: str, get_previous: bool = False, only_uuids: bool = True) -> list[Message | str] | None:
+    async def get_related_messages(self, message_uuid: str, history_id: str = None, get_previous: bool = False, only_uuids: bool = True) -> list[Message | str] | None:
         messages = []
 
-        start_message: Message = await self.get_message(message_uuid)
+        start_message: Message = await self.get_message(message_uuid, history_id)
         if start_message is None:
             return None
 
-        history = await self.fetch_history()
+        history = await self.fetch_history(history_id)
         history_messages = history.messages
 
         if start_message.pos_in_history > 1:
@@ -261,17 +251,17 @@ class Chat:
         else:
             return messages
 
-    async def get_parent_message(self, message_uuid: str, only_uuid: bool = True ) -> Message | str | None:
+    async def get_parent_message(self, message_uuid: str, history_id: str = None, only_uuid: bool = True) -> Message | str | None:
         parent_message = None
 
-        start_message: Message = await self.get_message(message_uuid)
+        start_message: Message = await self.get_message(message_uuid, history_id)
         if start_message is None:
             return None
 
         if start_message.pos_in_history < 3:
             return None
 
-        history = await self.fetch_history()
+        history = await self.fetch_history(history_id)
         history_messages = history.messages
 
         if start_message.is_alternative:
@@ -294,7 +284,7 @@ class Chat:
         else:
             return parent_message
 
-    async def delete_messages(self, message_uuids: list) -> bool:
+    async def delete_messages(self, message_uuids: list, history_id: str = None) -> bool:
         if not self.client.is_authenticated():
             raise Exception('You must be authenticated to do this.')
 
@@ -317,7 +307,7 @@ class Chat:
             "method": 'POST',
             "headers": self.client.get_headers(),
             "body": json.dumps({
-                "history_id": self.history_id,
+                "history_id": history_id if history_id else self.history_id,
                 "uuids_to_delete": messages_to_delete
             })
         })
@@ -330,5 +320,5 @@ class Chat:
 
         raise Exception('Failed to delete messages.')
 
-    async def delete_message(self, message_uuid: str):
-        await self.delete_messages([message_uuid])
+    async def delete_message(self, message_uuid: str, history_id: str = None):
+        await self.delete_messages([message_uuid], history_id)

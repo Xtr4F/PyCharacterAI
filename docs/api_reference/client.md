@@ -111,12 +111,45 @@
   > Name: Catgirl maid Kitty, Character ID: qVj_CJkVTHVwBgLZ50s2mlXUhTYAcb3_5JrRmM4kBr0 \
   > Name: The catgirl twins, Character ID: mhbuLkwjQnlNKHHybATY3DQC0fK-wHpWqIt4S0bNhQk 
   > 
-  > ...  And 106 more catgirls ...
+  > ... And 106 more catgirls ...
 
-  **Returns** `list`
+**Returns** `list`
+
   
 ## async `get_recent_conversations()`
 > Returns a list of characters you recently had a conversation with. (`list`)
+
+## async `generate_image()`
+> Generates an image by prompt
+
+
+| Parameters | Description |
+| --- | --- |
+|  **prompt** : `str` | Text description of the image |
+
+**Returns** `str` (link to the image on the Character AI server)
+
+## async `upload_image()`
+> Uploads the image to the CharacterAI server. (Supported image formats
+> are PNG, JPEG, WEBP)
+
+| Parameters | Description |
+| --- | --- |
+|  **image** : `str` | Link or path to the image |
+
+**Returns** `str` (link to the image on the Character AI server)
+
+## async `generate_voice()`
+> Synthesizing text into audio using different voices
+
+| Parameters | Description |
+| --- | --- |
+|  **voice_id** : `int` | voice id |
+| **prompt** : `str` | text to be voiced |
+
+**Returns** `BytesIO | None`
+
+
 
 ## async `create_chat()`
 > Creates a new chat with character
@@ -132,7 +165,7 @@
 
 | Parameters | 
 | --- | 
-| **character_id** : `str` |
+| **character_id** : `str | None` = `None` |
 | **history_id** : `str` |
 
 **Returns** `Chat` instance

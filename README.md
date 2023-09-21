@@ -8,6 +8,11 @@ If you have any questions, problems, suggestions, please contact me:
 
 [![Tag](https://img.shields.io/badge/discord-server-black?style=flat&logo=Discord)](https://discord.gg/MN7pMbH2)
 [![Tag](https://img.shields.io/badge/telegram-dm-black?style=flat&logo=Telegram)](https://t.me/XtraF)
+
+
+[Documentation](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/welcome.md).
+
+---
 ## Installation
 ```bash
 pip install PyCharacterAI
@@ -22,6 +27,8 @@ from PyCharacterAI import Client
 ```Python
 client = Client()
 ```
+>  You can use `client = Client(use_plus=True)` if you have character ai
+>  plus
 
 This library allows you to authenticate in two ways:
 
@@ -48,8 +55,8 @@ await client.authenticate_with_token(token)
 > ⚠️ Warning! Do not share this token with anyone!
 
 
-## Simple example
-
+## Examples
+#### Simple example:
 ```Python
 import asyncio
 from PyCharacterAI import Client
@@ -71,11 +78,51 @@ async def main():
         message = input(f'{username}: ')  # In: Hi!
 
         answer = await chat.send_message(message)
-        print(f"Character: {answer.text}")  # Out: hello there! what kind of question you gonna ask me ? i'm here to assist you :)
+        print(f"{answer.src_character_name}: {answer.text}")  # Out: hello there! what kind of question you gonna ask me ? i'm here to assist you :)
 
 
 asyncio.run(main())
 ```
+---
+#### Working with images:
+> We'll get a link to the image on the Character AI server, which we can use for our own purposes: attach it to a message, download it, etc.
+1. We can generate an image from a prompt:
 
-## Documentation
-The library has [documentation](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/welcome.md).
+```python
+prompt = "Prompt"
+
+url = await client.generate_image(prompt)
+```
+
+2. We can upload our own image:
+
+```python
+image = "URL or path to the image"
+
+url = (await client.upload_image(image))['response']
+```
+> Available image formats: PNG, JPEG, WEBP.
+>
+
+---
+#### Working with voice:
+> We can synthesize audio from text using one of several voices (Text to Speech)
+
+```python
+text = "Hi all ! This is PyCharacterAI. PyCharacterAI is An unofficial asynchronous api wrapper for Character AI. For Python."
+voice = 22 # Anime Girl (F) (en-US)
+
+audio = await client.generate_voice(voice, text)
+```
+> It'll return BytesIO, which we can use:
+
+```python
+filepath = "voice.mp3"  # Path to the directory where you want to save the audio
+
+with open(filepath, 'wb') as f:
+    f.write(audio.read())
+```
+
+
+
+
