@@ -109,7 +109,7 @@ url = (await client.upload_image(image))['response']
 > We can synthesize audio from text using one of several voices (Text to Speech)
 
 ```python
-text = "Hi all ! This is PyCharacterAI. PyCharacterAI is An unofficial asynchronous api wrapper for Character AI. For Python."
+text = "Hi everybody! This is just a test of Text to speech feature Character AI. Bye bye !"
 voice = 22 # Anime Girl (F) (en-US)
 
 audio = await client.generate_voice(voice, text)
@@ -122,6 +122,7 @@ filepath = "voice.mp3"  # Path to the directory where you want to save the audio
 with open(filepath, 'wb') as f:
     f.write(audio.read())
 ```
+> You can listen to an audio example here: [click](https://github.com/Xtr4F/PyCharacterAI/blob/main/examples/03_working_with_voice/voice.mp3)
 
 
 
