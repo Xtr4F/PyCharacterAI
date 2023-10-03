@@ -103,6 +103,20 @@ class Client:
             return (await request.json())['character']
         raise Exception('Could not fetch character information.')
 
+    async def fetch_voices(self):
+        if not self.is_authenticated():
+            raise Exception('You must be authenticated to do this.')
+        if self.is_guest():
+            raise Exception('Guest accounts cannot use this feature.')
+
+        request = await self.requester.request(f"https://beta.character.ai/chat/character/voices/", options={
+            "headers": self.get_headers()
+        })
+
+        if request.status == 200:
+            return (await request.json())['voices']
+        raise Exception('Could not fetch voices.')
+
     async def search_characters(self, character_name: str) -> list:
         if not self.is_authenticated():
             raise Exception('You must be authenticated to do this.')
