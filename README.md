@@ -1,5 +1,5 @@
 # PyCharacterAI
-> An unofficial asynchronous api wrapper for [Character AI](https://character.ai/). For Python.
+> An unofficial asynchronous Python api wrapper for [Character AI](https://character.ai/).
 ##
 
 This library is based on the [Character AI Unofficial Node API](https://github.com/realcoloride/node_characterai), made by [realcoloride](https://github.com/realcoloride). 
@@ -10,34 +10,39 @@ If you have any questions, problems, suggestions, please contact me:
 [![Tag](https://img.shields.io/badge/telegram-dm-black?style=flat&logo=Telegram)](https://t.me/XtraF)
 
 
-[Documentation](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/welcome.md).
+📚 [Documentation](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/welcome.md).
 
 ---
 ## Installation
 ```bash
 pip install PyCharacterAI
 ```
+---
 
 
 ## Getting started
-> First, import and create a new instance of the Client class
+**First, import and create a new instance of the `Client` class**:
 ```Python
 from PyCharacterAI import Client
-```
-```Python
+
+
 client = Client()
 ```
+
 >  You can use `client = Client(use_plus=True)` if you have character ai
->  plus
+>  plus.
+---
 
-This library allows you to authenticate in two ways:
+**This library allows you to authenticate in two ways**:
 
-1. As a guest (Some api features are not available):
+\
+*1. As a guest (Some api features are not available)*:
+
 ```Python
 await client.authenticate_as_guest()
 ```
-
-2. Using a token:
+\
+*2. Using a token*:
 ```Python
 token = 'TOKEN'
 await client.authenticate_with_token(token)
@@ -49,11 +54,11 @@ await client.authenticate_with_token(token)
 > 3. Go to the `Storage` section and click on `Local Storage`.
 > 4. Look for the `@@auth0spajs@@::dyD3gE281MqgISG7FuIXYhL2WEknqZzv::https://auth0.character.ai/::openid profile email offline_access` key.
 > 5. Open the body and copy the access token.
-
+>
 > ![Access_Token](https://i.imgur.com/09Q9mLe.png)
 >
 > ⚠️ Warning! Do not share this token with anyone!
-
+---
 
 ## Examples
 #### Simple example:
@@ -86,15 +91,17 @@ asyncio.run(main())
 ---
 #### Working with images:
 > We'll get a link to the image on the Character AI server, which we can use for our own purposes: attach it to a message, download it, etc.
-1. We can generate an image from a prompt:
+
+\
+*1. We can generate an image from a prompt*:
 
 ```python
 prompt = "Prompt"
 
 url = await client.generate_image(prompt)
 ```
-
-2. We can upload our own image:
+\
+*2. We can upload our own image*:
 
 ```python
 image = "URL or path to the image"
@@ -108,21 +115,22 @@ url = (await client.upload_image(image))['response']
 #### Working with voice:
 > We can synthesize audio from text using one of several voices (Text to Speech)
 
+[A list of available voices](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/resources/voices.json)
+
 ```python
-text = "Hi everybody! This is just a test of Text to speech feature Character AI. Bye bye !"
+text = "Hi all ! This is PyCharacterAI. PyCharacterAI is An unofficial asynchronous api wrapper for Character AI. For Python."
 voice = 22 # Anime Girl (F) (en-US)
 
 audio = await client.generate_voice(voice, text)
 ```
-> It'll return BytesIO, which we can use:
-
-```python
-filepath = "voice.mp3"  # Path to the directory where you want to save the audio
-
-with open(filepath, 'wb') as f:
-    f.write(audio.read())
-```
-> You can listen to an audio example here: [click](https://github.com/Xtr4F/PyCharacterAI/blob/main/examples/03_working_with_voice/voice.mp3)
+>It'll return BytesIO, which we can use:
+>
+>```python
+>filepath = "voice.mp3"  # Path to the directory where you want to save the audio
+>
+>with open(filepath, 'wb') as f:
+>    f.write(audio.read())
+>```
 
 
 

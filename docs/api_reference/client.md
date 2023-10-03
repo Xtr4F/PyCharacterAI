@@ -87,6 +87,8 @@
   > title: Your friendly AI assistant \
   > character_id: iV5qb8ttzD7Ytl69U_-ONcW2tW_lrFrOVKExyKJHlJM
 
+## async `fetch_voices()`
+> Returns a `list` of available voices
 
 ## async `search_characters()`
 > ⚠️ To use this method, you must be authenticated with a token
@@ -141,6 +143,8 @@
 
 ## async `generate_voice()`
 > Synthesizing text into audio using different voices
+>
+> ([A list of available voices](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/resources/voices.json))
 
 | Parameters | Description |
 | --- | --- |

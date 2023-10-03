@@ -15,7 +15,7 @@
     - [MessageHistory](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/api_reference/messages/message_history.md)
 
 
-## Сontact with me
+## Contact with me
 If you have any questions, problems, suggestions, please contact me:
 
 [![Tag](https://img.shields.io/badge/discord-server-black?style=flat&logo=Discord)](https://discord.gg/MN7pMbH2)
