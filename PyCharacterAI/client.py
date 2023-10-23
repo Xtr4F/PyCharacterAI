@@ -1,11 +1,10 @@
 import base64
-import io
 import json
 import urllib.parse
-from io import BytesIO
-import requests
 import imghdr
 import os
+
+from io import BytesIO
 from urllib.parse import urlparse
 
 from uuid import uuid4
@@ -23,11 +22,17 @@ class Client:
         "user-agent": 'CharacterAI/1.0.0 (iPhone; iOS 14.4.2; Scale/3.00)'
     }
 
-    requester = Requester()
+    def __init__(self, use_plus: bool = False):
+        self.requester: Requester = Requester(use_plus)
 
-    def __init__(self, use_plus: bool = False, headless: bool = True):
-        self.requester.use_plus = use_plus
-        self.requester.headless = headless
+    async def ping(self) -> bool:
+        request = await self.requester.request("https://neo.character.ai/ping/", options={
+            "headers": self.get_headers()
+        })
+
+        if request.status_code == 200:
+            return True
+        return False
 
     async def fetch_categories(self) -> list[dict]:
         if not self.is_authenticated():
@@ -35,8 +40,8 @@ class Client:
 
         request = await self.requester.request('https://beta.character.ai/chat/character/categories/')
 
-        if request.status == 200:
-            return (await request.json()).get("categories", [])
+        if request.status_code == 200:
+            return (request.json()).get("categories", [])
         raise Exception('Failed to fetch categories.')
 
     async def fetch_user_config(self) -> dict:
@@ -44,11 +49,11 @@ class Client:
             raise Exception('You must be authenticated to do this.')
 
         request = await self.requester.request('https://beta.character.ai/chat/config/', options={
-            "headers": self.get_guest_headers()
+            "headers": self.get_headers()
         })
 
-        if request.status == 200:
-            return await request.json()
+        if request.status_code == 200:
+            return request.json()
         raise Exception('Failed fetching user configuration.')
 
     async def fetch_user(self) -> dict:
@@ -59,8 +64,8 @@ class Client:
             "headers": self.get_headers()
         })
 
-        if request.status == 200:
-            return (await request.json()).get("user", {})
+        if request.status_code == 200:
+            return request.json().get("user", {})
         raise Exception('Failed fetching user.')
 
     async def fetch_featured_characters(self) -> list:
@@ -71,12 +76,12 @@ class Client:
             "headers": self.get_headers()
         })
 
-        if request.status == 200:
-            return (await request.json()).get('characters', [])
+        if request.status_code == 200:
+            return (request.json()).get('characters', [])
         raise Exception('Failed fetching featured characters.')
 
     async def fetch_characters_by_category(self, curated: bool = False) -> dict[str, list]:
-        if not self.requester.is_initialized():
+        if not self.is_authenticated():
             raise Exception('You must be authenticated to do this.')
 
         url = f"https://beta.character.ai/chat/{'curated_categories' if curated else 'categories'}/characters/"
@@ -87,8 +92,8 @@ class Client:
 
         property_ = 'characters_by_curated_category' if curated else 'characters_by_category'
 
-        if request.status == 200:
-            return (await request.json())[property_]
+        if request.status_code == 200:
+            return (request.json())[property_]
         raise Exception('Failed fetching characters by category.')
 
     async def fetch_character_info(self, character_id: str) -> dict:
@@ -99,8 +104,8 @@ class Client:
             "headers": self.get_headers()
         })
 
-        if request.status == 200:
-            return (await request.json())['character']
+        if request.status_code == 200:
+            return request.json()['character']
         raise Exception('Could not fetch character information.')
 
     async def fetch_voices(self):
@@ -113,8 +118,8 @@ class Client:
             "headers": self.get_headers()
         })
 
-        if request.status == 200:
-            return (await request.json())['voices']
+        if request.status_code == 200:
+            return (request.json())['voices']
         raise Exception('Could not fetch voices.')
 
     async def search_characters(self, character_name: str) -> list:
@@ -127,8 +132,8 @@ class Client:
             "headers": self.get_headers()
         })
 
-        if request.status == 200:
-            return (await request.json()).get('characters')
+        if request.status_code == 200:
+            return (request.json()).get('characters')
         raise Exception('Could not search for characters.')
 
     async def get_recent_conversations(self) -> list:
@@ -139,8 +144,8 @@ class Client:
             "headers": self.get_headers()
         })
 
-        if request.status == 200:
-            return (await request.json()).get('characters', {})
+        if request.status_code == 200:
+            return (request.json()).get('characters', {})
         raise Exception('Could not get recent conversations.')
 
     async def generate_image(self, prompt: str) -> str:
@@ -153,8 +158,8 @@ class Client:
             "body": json.dumps({"image_description": prompt})
         })
 
-        if request.status == 200:
-            response = await request.json()
+        if request.status_code == 200:
+            response = request.json()
             return response.get('image_rel_path', '')
 
         raise Exception('Failed generating image.')
@@ -169,26 +174,14 @@ class Client:
         else:
             parsed_url = urlparse(image)
             if parsed_url.scheme and parsed_url.netloc:
-                response = requests.get(image)
+                response = await self.requester.request(image)
                 image_data = response.content
             else:
                 raise Exception('Invalid image format!')
 
-        image_format = imghdr.what(None, h=image_data)
+        image_format = imghdr.what(None, h=image_data) or 'jpeg'
 
-        match image_format:
-            case "png":
-                image_format = "image/png"
-            case "jpeg":
-                image_format = "image/jpeg"
-            case "webp":
-                image_format = "image/webp"
-            case _:
-                raise Exception('Invalid image format! (Only png, jpeg or webp can be used)')
-
-        base64_img = (base64.b64encode(image_data)).decode('utf-8')
-
-        return await self.requester.upload_image(base64_img, self, image_format)
+        return await self.requester.upload_image(image_data, self, image_format)
 
     async def generate_voice(self, voice_id: int, prompt: str) -> BytesIO | None:
         if not self.is_authenticated():
@@ -206,8 +199,8 @@ class Client:
             "method": 'GET',
             "headers": self.get_headers()
         })
-        if request.status == 200:
-            response = await request.json()
+        if request.status_code == 200:
+            response = request.json()
 
             speech = response['speech']
 
@@ -216,7 +209,7 @@ class Client:
 
             binary_data = base64.b64decode(speech)
 
-            audio_stream = io.BytesIO()
+            audio_stream = BytesIO()
             audio_stream.write(binary_data)
             audio_stream.seek(0)
 
@@ -236,8 +229,8 @@ class Client:
             "headers": self.get_headers()
         })
 
-        if request.status == 200:
-            response = await request.json()
+        if request.status_code == 200:
+            response = request.json()
             return Chat(client=self, character_id=character_id, continue_body=response)
 
         raise Exception('Could not create a new chat.')
@@ -255,11 +248,11 @@ class Client:
             "headers": self.get_headers()
         })
 
-        if (await request.text()) == "history not found.":
+        if request.text == "history not found.":
             raise Exception("History not found.")
 
-        if request.status == 200:
-            response = await request.json()
+        if request.status_code == 200:
+            response = request.json()
             return Chat(client=self, character_id=character_id, continue_body=response)
 
     async def create_or_continue_chat(self, character_id: str, history_id: str = None) -> Chat:
@@ -277,7 +270,7 @@ class Client:
 
         response = None
 
-        if request.status == 404:
+        if request.status_code == 404:
             request = await self.requester.request('https://beta.character.ai/chat/history/create/', options={
                 "method": 'POST',
                 "body": json.dumps({
@@ -286,44 +279,32 @@ class Client:
                 "headers": self.get_headers()
             })
 
-            if request.status == 200:
-                response = await request.json()
+            if request.status_code == 200:
+                response = request.json()
             else:
                 raise Exception('Could not create a new chat.')
 
-        if request.status == 200:
-            response = await request.json()
+        if request.status_code == 200:
+            response = request.json()
 
         return Chat(client=self, character_id=character_id, continue_body=response)
 
-    async def authenticate_with_token(self, token: str):
-        if self.is_authenticated():
-            raise Exception('Already authenticated')
+    async def authenticate_with_token(self, token: str, force: bool = False):
 
-        await self.requester.initialize() if not self.requester.is_initialized() else None
+        if not force:
+            # Just a request to check the token validity
+            request = await self.requester.request('https://beta.character.ai/chat/characters/recent/', options={
+                "headers": self.get_headers(token)
+            })
 
-        request = await self.requester.request('https://beta.character.ai/dj-rest-auth/auth0/', options={
-            "method": 'POST',
-            "body": {"access_token": token},
-            "headers": self.get_guest_headers()
-        })
+            if request.status_code == 401:
+                raise Exception('Token is invalid.')
 
-        if request.status == 200:
-            response = await request.json()
-
-            self.__is_guest = False
-            self.__authenticated = True
-            self.__token = response['key']
-
-            return self
-        raise Exception('Token is invalid')
+        self.__token = token
+        self.__authenticated = True
+        self.__is_guest = False
 
     async def authenticate_as_guest(self):
-        if self.is_authenticated():
-            raise Exception('Already authenticated')
-
-        await self.requester.initialize() if not self.requester.is_initialized() else None
-
         request = None
 
         for i in range(20):
@@ -341,8 +322,8 @@ class Client:
             if request:
                 break
 
-        if request.status == 200:
-            response = await request.json()
+        if request.status_code == 200:
+            response = request.json()
 
             if response.get('success') is True:
                 self.__is_guest = True
@@ -351,9 +332,9 @@ class Client:
 
                 return self
             else:
-                raise Exception('Registering failed')
+                raise Exception('Registering failed.')
         else:
-            raise Exception('Failed to fetch a lazy token')
+            raise Exception('Failed to fetch a lazy token.')
 
     def get_token(self):
         return self.__token
@@ -364,9 +345,9 @@ class Client:
     def is_authenticated(self):
         return self.__authenticated
 
-    def get_headers(self):
+    def get_headers(self, token=None):
         return {
-            'authorization': f'Token {self.get_token()}',
+            'authorization': f'Token {token or self.get_token()}',
             'Content-Type': 'application/json'
         }
 

@@ -6,11 +6,6 @@
 pip install PyCharacterAI
 ```
 
-*Then install `chromium`*
-```bash
-playwright install chromium
-```
-
 
 \
 *Then import the `Client` class from the library and create a new instance of it*:
@@ -41,10 +36,8 @@ await client.authenticate_with_token(token)
 > 1. Open the Character AI website in your browser
 > 2. Open the developer tools `F12` and go to the `Application` tab.
 > 3. Go to the `Storage` section and click on `Local Storage`.
-> 4. Look for the `@@auth0spajs@@::dyD3gE281MqgISG7FuIXYhL2WEknqZzv::https://auth0.character.ai/::openid profile email offline_access` key.
-> 5. Open the body and copy the access token.
->
-> ![Access_Token](https://i.imgur.com/09Q9mLe.png)
+> 4. Look for the `char_token` key.
+> 5. Copy `value`.
 >
 > ⚠️ Warning! Do not share this token with anyone!
 

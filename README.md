@@ -1,8 +1,10 @@
 # PyCharacterAI
-> An unofficial asynchronous Python api wrapper for [Character AI](https://character.ai/).
+> An unofficial asynchronous Python api wrapper for [Character AI](https://character.ai/) using [curl-cffi](https://github.com/yifeikong/curl_cffi).
 ##
 
 This library is based on the [Character AI Unofficial Node API](https://github.com/realcoloride/node_characterai), made by [realcoloride](https://github.com/realcoloride). 
+
+
 
 If you have any questions, problems, suggestions, please contact me:
 
@@ -48,16 +50,18 @@ token = 'TOKEN'
 await client.authenticate_with_token(token)
 ```
 > Instructions for getting a token:
-> 
+>
 > 1. Open the Character AI website in your browser
 > 2. Open the developer tools `F12` and go to the `Application` tab.
 > 3. Go to the `Storage` section and click on `Local Storage`.
-> 4. Look for the `@@auth0spajs@@::dyD3gE281MqgISG7FuIXYhL2WEknqZzv::https://auth0.character.ai/::openid profile email offline_access` key.
-> 5. Open the body and copy the access token.
+> 4. Look for the `char_token` key.
+> 5. Copy `value`.
 >
-> ![Access_Token](https://i.imgur.com/09Q9mLe.png)
 >
 > ⚠️ Warning! Do not share this token with anyone!
+
+
+
 ---
 
 ## Examples

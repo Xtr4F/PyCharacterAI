@@ -1,6 +1,7 @@
 import json
 
-from PyCharacterAI.message import Message, MessageHistory, OutgoingMessage, Reply
+from PyCharacterAI.types.message import Message, MessageHistory, OutgoingMessage, Reply
+from PyCharacterAI.requester import Requester
 
 
 class Chat:
@@ -15,7 +16,7 @@ class Chat:
         ai = next(participant for participant in continue_body.get('participants') if not participant['is_human'])
 
         self.ai_id = ai['user']['username'] if not self.chat_type == "ROOM" else None
-        self.requester = client.requester
+        self.requester: Requester = client.requester
 
     async def fetch_history(self, page_num: int = None, history_id: str = None) -> MessageHistory:
         if not self.client.is_authenticated():
@@ -29,8 +30,8 @@ class Chat:
             "headers": self.client.get_headers()
         })
 
-        if request.status == 200:
-            response = await request.json()
+        if request.status_code == 200:
+            response = request.json()
 
             history_messages = response['messages']
             messages = []
@@ -61,8 +62,8 @@ class Chat:
             })
         })
 
-        if request.status == 200:
-            response = await request.json()
+        if request.status_code == 200:
+            response = request.json()
 
             return response.get('histories', {})
 
@@ -77,26 +78,13 @@ class Chat:
         request = await self.requester.request('https://beta.character.ai/chat/streaming/', options={
             "method": 'POST',
             "headers": self.client.get_headers(),
-            "body": json.dumps(payload),
-            "client": self.client
+            "body": json.dumps(payload)
         })
 
-        if request.get('status', 500) == 200:
-            response = json.loads(request.get('text', {}))
+        if request.status_code == 200:
+            response = request.json()
+            return Reply(chat=self, options=response)
 
-            replies = response.get("replies", [])
-
-            messages = []
-
-            for i in range(len(replies)):
-                messages.append(Reply(chat=self, options=response))
-
-            if len(messages) == 0:
-                if response.get("abort", False):
-                    return Reply(chat=self, options=response)
-                return None
-
-            return messages.pop()
         raise Exception('Failed sending request to character.')
 
     async def send_message(self, text: str = "", primary_msg_uuid=None, image_path=None, image_description=None) -> Reply | None:
@@ -133,7 +121,7 @@ class Chat:
             raise Exception('You must be authenticated to do this.')
 
         if rate > 4 or rate < 0:
-            raise Exception('The rate should be between 1 and 4.')
+            raise Exception('The rate should be between 0 and 4.')
 
         label_ids = [235, 238, 241, 244]
 
@@ -157,7 +145,7 @@ class Chat:
             "body": json.dumps(payload)
         })
 
-        if request.status == 200:
+        if request.status_code == 200:
             return True
         return False
 
@@ -312,8 +300,8 @@ class Chat:
             })
         })
 
-        if request.status == 200:
-            response = await request.json()
+        if request.status_code == 200:
+            response = request.json()
 
             if response.get('status', '') == 'OK':
                 return True

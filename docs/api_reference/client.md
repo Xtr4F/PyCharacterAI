@@ -15,7 +15,7 @@
 | Parameters | Description |
 | --- | --- |
 | **token** : `str` | `Access token`. (See how to get it in the `Getting started` section) |
-
+| **force** : `bool` = False | If `True`, does not check the validity of the token with a test request (may cause errors) |
 **Returns** `Client` instance 
 
 ## `is_guest()`

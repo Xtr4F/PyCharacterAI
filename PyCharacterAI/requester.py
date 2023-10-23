@@ -1,71 +1,29 @@
-from random import Random
+import binascii
+import json
+import os
+from curl_cffi.requests import AsyncSession, Response
+import sys, asyncio
 
-from playwright.async_api import async_playwright, Request, Route
+if sys.version_info >= (3, 8) and sys.platform.lower().startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 class Requester:
-    __playwright = None
-
-    headless = True
-
-    browser = None
-    page = None
-
-    __initialized = False
-    __hasDisplayed = False
-
     use_plus = False
 
-    def __init__(self):
-        pass
+    def __init__(self, use_plus: bool):
+        self.use_plus = use_plus
 
-    def is_initialized(self):
-        return self.__initialized
+    class Response:
+        def __init__(self, url, code, content):
+            self.url = url
+            self.status_code = code
+            self.content = content
 
-    async def initialize(self):
-        if self.is_initialized():
-            return
+        def json(self):
+            return json.loads(self.content)
 
-        self.__playwright = await async_playwright().start()
-
-        self.browser = await self.__playwright.chromium.launch(
-            headless=self.headless,
-            args=[
-                '--fast-start',
-                '--disable-extensions',
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--no-gpu',
-                '--disable-background-timer-throttling',
-                '--disable-renderer-backgrounding',
-                '--override-plugin-power-saver-for-testing=never',
-                '--disable-extensions-http-throttling',
-                '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.3'
-            ],
-        )
-
-        page = await self.browser.new_page(
-            viewport={
-                "width": 1920 + Random().randint(0, 100),
-                "height": 3000 + Random().randint(0, 100),
-            },
-            device_scale_factor=1,
-            has_touch=False,
-            is_mobile=False,
-            java_script_enabled=True,
-            user_agent='CharacterAI/1.0.0 (iPhone; iOS 14.4.2; Scale/3.00)',
-        )
-
-        page.set_default_navigation_timeout(0)
-        self.page = page
-
-        self.__initialized = True
-
-        print("[PyCharacterAI] - Launched successfully")
-
-    async def request(self, url: str, options: dict = {}):
-        page = self.page
-
+    async def request(self, url: str, options: dict = {}) -> Response:
         method = options.get('method', 'GET')
 
         body = options.get('body', {})
@@ -76,149 +34,56 @@ class Requester:
         if self.use_plus:
             url.replace('beta.character.ai', 'plus.character.ai')
 
-        try:
-            payload = {
-                "method": method,
-                "headers": headers,
-                "body": body
-            }
+        if method == 'GET':
+            async with AsyncSession(impersonate="chrome110") as session:
+                response = await session.get(url, headers=headers)
 
-            if url.endswith("/streaming/"):
+        elif method == 'POST':
+            async with AsyncSession(impersonate="chrome110") as session:
+                response = await session.post(url, headers=headers, data=body)
 
-                if not self.__hasDisplayed:
-                    self.__hasDisplayed = True
+        elif method == 'PUT':
+            async with AsyncSession(impersonate="chrome110") as session:
+                response = await session.post(url, headers=headers, data=body)
 
-                response = await page.evaluate(
-                    '''async ({payload, url}) => {
-                           const response = await fetch(url, payload);
+        if url.endswith("/streaming/"):
+            text = response.text.split('\n')[-2]
+            return self.Response(url, response.status_code, text)
 
-                           const data = await response.text();
-                           const matches = data.match(/\{.*\}/g);
+        return self.Response(url, response.status_code, response.content)
 
-                           const responseText = matches[matches.length - 1];
+    async def upload_image(self, image: bytes, client, content_type):
+        def random_boundary() -> str:
+            return binascii.hexlify(os.urandom(16)).decode()
 
-                           let result = {
-                               code: 500,
-                           }
+        boundary = f'----WebKitFormBoundary{random_boundary()}'
+        headers = {
+            'Content-Type': f'multipart/form-data; boundary={boundary}',
+            'authorization': f"Token {client.get_token()}"
+        }
 
-                           if (!matches) result = null;
-                           else {
-                               result.code = 200;
-                               result.response = responseText;
-                           }
+        body = f'--{boundary}\r\n'.encode("UTF-8")
+        body += f'Content-Disposition: form-data; name="image"; filename="image"\r\n'.encode("UTF-8")
+        body += f'Content-Type: image/{content_type}\r\n\r\n'.encode("UTF-8")
+        body += image
+        body += f'\r\n--{boundary}--\r\n'.encode("UTF-8")
 
-                           return result;
-                    }''',
-                    {
-                        "payload": payload,
-                        "url": url
-                    }
-                )
+        request = await self.request("https://beta.character.ai/chat/upload-image/", options={
+            "method": 'POST',
+            "headers": headers,
+            "body": body
+        })
 
-                response['status'] = response['code']
-                response['text'] = response['response']
+        if request.status_code == 200:
+            response = request.json()
 
-            else:
-                try:
-                    initial_request = True
+            if response['status'] == "OK":
+                return f"https://characterai.io/i/400/static/user/{response['value']}"
 
-                    async def request_handler(route: Route, request: Request):
-                        nonlocal initial_request
+            elif response['status'] == "VIOLATES_POLICY":
+                raise Exception("Could not upload an image. Image violates policy.")
 
-                        if request.is_navigation_request() and not initial_request:
-                            return await route.abort()
+        raise Exception("Could not upload an image.")
 
-                        initial_request = False
 
-                        if method == 'GET':
-                            await route.continue_(
-                                method=method,
-                                headers=headers)
-                        else:
-                            await route.continue_(
-                                method=method,
-                                post_data=body,
-                                headers=headers)
 
-                    await page.route('**/*', request_handler)
-
-                    response = (await page.goto(url, wait_until='load'))
-                    await page.wait_for_timeout(500)
-
-                except Exception as e:
-                    print("[PyCharacterAI] Error: ")
-                    print(e)
-
-                finally:
-                    await page.unroute('**/*')
-
-        except Exception as e:
-            authenticating = (url == "https://beta.character.ai/chat/auth/lazy/")
-
-            if not authenticating:
-                print("[PyCharacterAI] - Error: ")
-                print(e)
-
-        return response
-
-    async def upload_image(self, image, client, content_type):
-        page = self.page
-
-        response = None
-
-        response = await page.evaluate(
-            '''async ({headers, image, content_type}) => {
-                        var result = {
-                            code: 500
-                        };
-
-                        const b64toBlob = (base64, type = 'application/octet-stream') => 
-                            fetch(`data:${type};base64,${base64}`).then(res => res.blob())
-
-                        const contentType = content_type;
-
-                        const blob = await b64toBlob(image, contentType);
-
-                        const formData = new FormData();
-                        formData.append("image", blob, contentType);
-
-                        let head = headers;
-                        delete head["Content-Type"];
-
-                        const uploadResponse = await fetch("https://beta.character.ai/chat/upload-image/", {
-                            headers: headers,
-                            method: "POST",
-                            body: formData
-                        })
-
-                        if (uploadResponse.status == 200) {
-                            result.code = 200;
-
-                            let uploadResponseJSON = await uploadResponse.json();
-                            result.response = uploadResponseJSON.value;
-                        }
-
-                        return result;
-
-                    }
-            ''',
-            {
-                "headers": client.get_headers(),
-                "image": image,
-                "content_type": content_type
-            })
-
-        if response['code'] == 200:
-            response['response'] = (f"https://characterai.io/i/400/static/user/{response['response']}")
-
-        return response
-
-    async def uninitialize(self):
-        try:
-            await self.page.close()
-            await self.browser.close()
-            self.__initialized = False
-
-        except Exception as e:
-            print("[PyCharacterAI] - Error: ")
-            print(e)
