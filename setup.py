@@ -16,8 +16,7 @@ setup(
     long_description_content_type='text/markdown',
     url='https://github.com/Xtr4F/PyCharacterAI',
     packages=find_packages(),
-    install_requires=['uuid>=1.30',
-                      'curl-cffi==0.5.9'],
+    install_requires=['curl-cffi==0.5.9'],
     classifiers=[
         'Programming Language :: Python :: 3.10',
         'License :: OSI Approved :: MIT License'
