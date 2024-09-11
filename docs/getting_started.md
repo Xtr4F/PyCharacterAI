@@ -3,7 +3,7 @@
 
 First, you need to install the library:
 ```bash
-pip install PyCharacterAI
+pip install git+https://github.com/Xtr4F/PyCharacterAI
 ```
 
 

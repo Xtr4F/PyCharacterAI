@@ -19,7 +19,7 @@ If you have any questions, problems, suggestions, please open an issue or contac
 
 First, you need to install the library:
 ```bash
-pip install PyCharacterAI
+pip install git+https://github.com/Xtr4F/PyCharacterAI
 ```
 
 ---
