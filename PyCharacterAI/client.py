@@ -1,7 +1,8 @@
 from typing import Union
 
-from PyCharacterAI.methods import ChatMethods, AccountMethods, CharacterMethods, UserMethods, UtilsMethods
-from PyCharacterAI.requester import Requester
+from .methods import ChatMethods, AccountMethods, CharacterMethods, UserMethods, UtilsMethods
+from .exceptions import AuthenticationError
+from .requester import Requester
 
 
 class Client:
@@ -26,7 +27,10 @@ class Client:
         if web_next_auth:
             self.set_web_next_auth(web_next_auth)
 
-        self.set_account_id(str((await self.account.fetch_me()).account_id))
+        try:
+            self.set_account_id(str((await self.account.fetch_me()).account_id))
+        except Exception:
+            raise AuthenticationError('Maybe your token is invalid?')
 
     async def close_session(self):
         await self.__requester.ws_close()
