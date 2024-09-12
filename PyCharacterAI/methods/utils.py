@@ -255,7 +255,7 @@ class UtilsMethods:
         if request.status_code == 200:
             return Voice(request.json().get("voice"))
 
-        raise EditError("Cannot edit voice. May be your audio is invalid?")
+        raise EditError("Cannot edit voice. Maybe your audio is invalid?")
 
     async def delete_voice(self, voice_id: str) -> bool:
         request = await self.__requester.request(
@@ -290,7 +290,7 @@ class UtilsMethods:
 
         if request.status_code != 200:
             error = response.get("error", {}).get("message", "")
-            raise ActionError(f"Cannot generate voice. {error}")
+            raise ActionError(f"Cannot generate speech. {error}")
 
         audio_url = response.get("replayUrl", "")
 
@@ -304,4 +304,4 @@ class UtilsMethods:
         if request.status_code == 200:
             return speech
 
-        raise ActionError("Cannot generate voice.")
+        raise ActionError("Cannot generate speech.")
