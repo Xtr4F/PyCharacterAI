@@ -13,7 +13,7 @@
 ---
 **TO-DO**:
 - [ ] Synchronous version.
-- [ ] Exceptions.
+- [x] Exceptions.
 - [ ] Logging?
 - [ ] Finish the docs.
 
