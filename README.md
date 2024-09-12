@@ -1,11 +1,23 @@
 # PyCharacterAI
-> An **unofficial** asynchronous Python api wrapper for [Character AI](https://character.ai/) using [curl-cffi](https://github.com/yifeikong/curl_cffi).
-##
+> An asynchronous Python api wrapper for [Character AI](https://character.ai/) using [curl-cffi](https://github.com/yifeikong/curl_cffi).
+
 > [!WARNING]
 > This is an unofficial library made by an enthusiast who has no relation to the CharacterAI development team. CharacterAI has no official api and all breakpoints were found manually using reverse proxy. The author is not responsible for possible consequences of using this library.
 
+
+
+---
 📚 [Documentation](https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/welcome.md).
 
+
+---
+**TO-DO**:
+- [ ] Synchronous version.
+- [ ] Exceptions.
+- [ ] Logging?
+- [ ] Finish the docs.
+
+---
 \
 If you have any questions, problems, suggestions, please open an issue or contact me:
 
