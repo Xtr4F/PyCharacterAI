@@ -8,7 +8,7 @@ def readme():
 
 setup(
     name='PyCharacterAI',
-    version='2.0.0',
+    version='2.0.1',
     author='XtraF',
     author_email='igoromarov15@gmail.com',
     description='An unofficial asynchronous api wrapper for Character AI.',
