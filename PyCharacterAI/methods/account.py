@@ -2,8 +2,9 @@ import uuid
 import json
 from typing import List, Dict, Union
 
-from PyCharacterAI.types import *
-from PyCharacterAI.requester import Requester
+from ..types import *
+from ..exceptions import *
+from ..requester import Requester
 
 
 class AccountMethods:
@@ -20,7 +21,7 @@ class AccountMethods:
         if request.status_code == 200:
             return Account(request.json().get('user').get('user'))
         
-        raise Exception('Cannot fetch your account.')
+        raise FetchError('Cannot fetch your account.')
 
     async def fetch_my_settings(self) -> Dict:
         request = await self.__requester.request(
@@ -31,7 +32,7 @@ class AccountMethods:
         if request.status_code == 200:
             return request.json()
 
-        raise Exception('Cannot fetch your settings.')
+        raise FetchError('Cannot fetch your settings.')
 
     async def fetch_my_followers(self) -> List:
         request = await self.__requester.request(
@@ -42,7 +43,7 @@ class AccountMethods:
         if request.status_code == 200:
             return request.json().get("followers", [])
 
-        raise Exception('Cannot fetch your followers.')
+        raise FetchError('Cannot fetch your followers.')
 
     async def fetch_my_following(self) -> List:
         request = await self.__requester.request(
@@ -53,7 +54,7 @@ class AccountMethods:
         if request.status_code == 200:
             return request.json().get("following", [])
 
-        raise Exception('Cannot fetch your following.')
+        raise FetchError('Cannot fetch your following.')
 
     async def fetch_my_persona(self, persona_id: str) -> Persona:
         request = await self.__requester.request(
@@ -66,7 +67,7 @@ class AccountMethods:
             if persona:
                 return Persona(persona)
 
-        raise Exception('Cannot fetch your persona. May be persona does not exist?')
+        raise FetchError('Cannot fetch your persona. Maybe persona does not exist?')
 
     async def fetch_my_personas(self) -> List[Persona]:
         request = await self.__requester.request(
@@ -83,7 +84,7 @@ class AccountMethods:
 
             return personas
 
-        raise Exception('Cannot fetch your personas.')
+        raise FetchError('Cannot fetch your personas.')
 
     async def fetch_my_characters(self) -> List[CharacterShort]:
         request = await self.__requester.request(
@@ -100,7 +101,7 @@ class AccountMethods:
 
             return characters
 
-        raise Exception('Cannot fetch your characters.')
+        raise FetchError('Cannot fetch your characters.')
 
     async def fetch_my_upvoted_characters(self) -> List[CharacterShort]:
         request = await self.__requester.request(
@@ -116,7 +117,7 @@ class AccountMethods:
                 characters.append(CharacterShort(character_raw))
             return characters
 
-        raise Exception('Cannot fetch your upvoted characters.')
+        raise FetchError('Cannot fetch your upvoted characters.')
 
     async def fetch_my_voices(self) -> List[Voice]:
         request = await self.__requester.request(
@@ -132,7 +133,7 @@ class AccountMethods:
                 voices.append(Voice(raw_voice))
 
             return voices
-        raise Exception('Cannot fetch your voices.')
+        raise FetchError('Cannot fetch your voices.')
 
     async def __update_settings(self, options: Dict) -> Dict:
         default_persona_id = options.get("default_persona_id", None)
@@ -141,7 +142,7 @@ class AccountMethods:
         character_id = options.get("character_id", None)
 
         if default_persona_id is None and persona_override is None and voice_override is None:
-            raise Exception('Cannot update account settings')
+            raise UpdateError('Cannot update account settings.')
 
         settings = await self.fetch_my_settings()
 
@@ -169,17 +170,20 @@ class AccountMethods:
             if response.get("success", False):
                 return response.get("settings")
 
-        raise Exception('Cannot update account settings')
+        raise UpdateError('Cannot update account settings.')
 
     async def edit_account(self, name: str, username: str, bio: str = "", avatar_rel_path: str = "") -> bool:
         if len(username) < 2 or len(name) > 20:
-            raise Exception(f"Cannot edit account info. Username must be at least 2 characters and no more than 20.")
+            raise InvalidArgumentError(f"Cannot edit account info. "
+                                       f"Username must be at least 2 characters and no more than 20.")
 
         if len(name) < 2 or len(name) > 50:
-            raise Exception(f"Cannot edit account info. Name must be at least 2 characters and no more than 50.")
+            raise InvalidArgumentError(f"Cannot edit account info. "
+                                       f"Name must be at least 2 characters and no more than 50.")
 
         if len(bio) > 500:
-            raise Exception(f"Cannot edit account info. Bio must be no more than 500 characters.")
+            raise InvalidArgumentError(f"Cannot edit account info. "
+                                       f"Bio must be no more than 500 characters.")
 
         new_account_info = {
             "avatar_type": "UPLOADED" if avatar_rel_path else "DEFAULT",
@@ -206,15 +210,17 @@ class AccountMethods:
             if status == "OK":
                 return True
 
-            raise Exception(f"Cannot edit account info {status}")
-        raise Exception('Cannot edit account info')
+            raise EditError(f"Cannot edit account info. {status}")
+        raise EditError('Cannot edit account info.')
 
     async def create_persona(self, name: str, definition: str = "", avatar_rel_path: str = "") -> Persona:
         if len(name) < 3 or len(name) > 20:
-            raise Exception(f"Cannot create persona. Name must be at least 3 characters and no more than 20.")
+            raise InvalidArgumentError(f"Cannot create persona. "
+                                       f"Name must be at least 3 characters and no more than 20.")
 
         if definition and len(definition) > 728:
-            raise Exception(f"Cannot create persona. Definition must be no more than 728 characters.")
+            raise InvalidArgumentError(f"Cannot create persona. "
+                                       f"Definition must be no more than 728 characters.")
 
         request = await self.__requester.request(
             url=f"https://plus.character.ai/chat/character/create/",
@@ -246,21 +252,23 @@ class AccountMethods:
             if response.get("status", None) == "OK" and response.get("persona", None) is not None:
                 return Persona(response.get("persona"))
 
-            raise Exception(f"Cannot create persona. {response.get("error", "")}")
-        raise Exception(f"Cannot create persona.")
+            raise CreateError(f"Cannot create persona. {response.get('error', '')}")
+        raise CreateError(f"Cannot create persona.")
 
     async def edit_persona(self, persona_id: str, name: str = "", definition: str = "",
                            avatar_rel_path: str = "") -> Persona:
         if name and (len(name) < 3 or len(name) > 20):
-            raise Exception(f"Cannot edit persona. Name must be at least 3 characters and no more than 20.")
+            raise InvalidArgumentError(f"Cannot edit persona. "
+                                       f"Name must be at least 3 characters and no more than 20.")
 
         if definition and len(definition) > 728:
-            raise Exception(f"Cannot edit persona. Definition must be no more than 728 characters.")
+            raise InvalidArgumentError(f"Cannot edit persona. "
+                                       f"Definition must be no more than 728 characters.")
 
         try:
             old_persona = await self.fetch_my_persona(persona_id)
         except Exception:
-            raise Exception("Cannot edit persona. May be persona does not exist?")
+            raise EditError("Cannot edit persona. May be persona does not exist?")
 
         payload = {
                     "avatar_file_name": old_persona.avatar.get_file_name() if old_persona.avatar else "",
@@ -301,14 +309,14 @@ class AccountMethods:
             if response.get("status", None) == "OK" and response.get("persona", None) is not None:
                 return Persona(response.get("persona"))
 
-            raise Exception(f"Cannot edit persona. {response.get("error", "")}")
-        raise Exception(f"Cannot edit persona.")
+            raise EditError(f"Cannot edit persona. {response.get('error', '')}")
+        raise EditError(f"Cannot edit persona.")
 
     async def delete_persona(self, persona_id: str) -> bool:
         try:
             old_persona = await self.fetch_my_persona(persona_id)
         except Exception:
-            raise Exception("Cannot delete persona. May be persona does not exist?")
+            raise DeleteError("Cannot delete persona. May be persona does not exist?")
 
         payload = {
             "archived": True,
@@ -344,8 +352,8 @@ class AccountMethods:
             if response.get("status", None) == "OK" and response.get("persona", None) is not None:
                 return True
 
-            raise Exception(f"Cannot delete persona. {response.get("error", "")}")
-        raise Exception(f"Cannot delete persona.")
+            raise DeleteError(f"Cannot delete persona. {response.get('error', '')}")
+        raise DeleteError(f"Cannot delete persona.")
 
     async def set_default_persona(self, persona_id: Union[str, None]) -> bool:
         try:
@@ -355,7 +363,7 @@ class AccountMethods:
             await self.__update_settings({"default_persona_id": persona_id})
             return True
         except Exception:
-            raise Exception(f"Cannot set default persona.")
+            raise SetError(f"Cannot set default persona.")
 
     async def unset_default_persona(self) -> bool:
         return await self.set_default_persona(None)
@@ -371,7 +379,7 @@ class AccountMethods:
             })
             return True
         except Exception:
-            raise Exception(f"Cannot set persona.")
+            raise SetError(f"Cannot set persona.")
     
     async def unset_persona(self, character_id: str) -> bool:
         return await self.set_persona(character_id, None)
@@ -392,7 +400,7 @@ class AccountMethods:
             if (request.json()).get("success", False):
                 return True
 
-        raise Exception(f"Cannot set voice.")
+        raise SetError(f"Cannot set voice.")
 
     async def unset_voice(self, character_id: str) -> bool:
         return await self.set_voice(character_id, None)

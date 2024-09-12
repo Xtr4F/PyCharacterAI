@@ -3,7 +3,8 @@ import json
 
 from typing import Optional, List, Tuple, AsyncGenerator, Any, Union
 
-from PyCharacterAI.types import *
+from ..types import *
+from ..exceptions import *
 
 
 class ChatMethods:
@@ -33,7 +34,7 @@ class ChatMethods:
 
             return histories
 
-        raise Exception('Cannot fetch histories.')
+        raise FetchError('Cannot fetch histories.')
 
     async def fetch_chats(self, character_id: str, **kwargs) -> List[Chat]:
         num_preview_turns: int = kwargs.get("num_preview_turns", 2)
@@ -52,7 +53,7 @@ class ChatMethods:
                 chats.append(Chat(raw_chat))
 
             return chats
-        raise Exception('Cannot fetch chats.')
+        raise FetchError('Cannot fetch chats.')
 
     async def fetch_chat(self, chat_id: str) -> Chat:
         request = await self.__requester.request(
@@ -68,7 +69,7 @@ class ChatMethods:
             if raw_chat:
                 return Chat(raw_chat)
 
-        raise Exception('Cannot fetch chat.')
+        raise FetchError('Cannot fetch chat.')
 
     async def fetch_recent_chats(self) -> List[Chat]:
         request = await self.__requester.request(
@@ -84,7 +85,7 @@ class ChatMethods:
                 chats.append(Chat(raw_chat))
             return chats
 
-        raise Exception('Cannot fetch recent chats.')
+        raise FetchError('Cannot fetch recent chats.')
 
     async def fetch_messages(self, chat_id, pinned_only: bool = False,
                              next_token: str = None) -> Tuple[List[Turn], Optional[str]]:
@@ -112,7 +113,7 @@ class ChatMethods:
                         turns.append(Turn(raw_turn))
 
             return turns, next_token
-        raise Exception('Cannot fetch messages.')
+        raise FetchError('Cannot fetch messages.')
 
     async def fetch_all_messages(self, chat_id, pinned_only: bool = False) -> List[Turn]:
         all_turns = []
@@ -153,7 +154,7 @@ class ChatMethods:
                 following_turns.append(turn)
 
             if next_token is None:
-                raise Exception('Cannot fetch following messages. May be turn_id is invalid?')
+                raise FetchError('Cannot fetch following messages. May be turn_id is invalid?')
 
             turns, next_token = await self.fetch_messages(chat_id, pinned_only=pinned_only, next_token=next_token)
 
@@ -171,7 +172,7 @@ class ChatMethods:
             return True
 
         error_comment = request.json().get("comment")
-        raise Exception(f'Cannot update chat name. {error_comment}')
+        raise UpdateError(f'Cannot update chat name. {error_comment}')
 
     async def archive_chat(self, chat_id: str) -> bool:
         request = await self.__requester.request(
@@ -186,7 +187,7 @@ class ChatMethods:
         if request.status_code == 200:
             return True
 
-        raise Exception(f'Cannot archive chat. May be chat is already archived or doesn\'t exist?')
+        raise ActionError(f'Cannot archive chat. Maybe chat is already archived or doesn\'t exist?')
 
     async def unarchive_chat(self, chat_id: str) -> bool:
         request = await self.__requester.request(
@@ -201,7 +202,7 @@ class ChatMethods:
         if request.status_code == 200:
             return True
 
-        raise Exception(f'Cannot unarchive chat. May be chat is not archived or doesn\'t exist?')
+        raise ActionError(f'Cannot unarchive chat. Maybe chat is not archived or doesn\'t exist?')
 
     async def copy_chat(self, chat_id: str, end_turn_id: str) -> Union[str, None]:
         request = await self.__requester.request(
@@ -219,7 +220,7 @@ class ChatMethods:
             return request.json().get("new_chat_id", None)
 
         error_comment = request.json().get("comment")
-        raise Exception(f'Cannot copy chat. {error_comment}')
+        raise ActionError(f'Cannot copy chat. {error_comment}')
 
     async def create_chat(self, character_id: str, greeting: bool = True) -> Tuple[Chat, Optional[Turn]]:
         request_id = str(uuid.uuid4())
@@ -258,12 +259,12 @@ class ChatMethods:
                 await self.__requester.ws_close()
 
                 error_comment = raw_response.get('comment', '')
-                raise Exception(f'Cannot create a new chat. {error_comment}')
+                raise CreateError(f'Cannot create a new chat. {error_comment}')
 
         await self.__requester.ws_clear(request_id)
 
         if new_chat is None or (greeting is True and greeting_turn is None):
-            raise Exception(f'Cannot create a new chat.')
+            raise CreateError(f'Cannot create a new chat.')
 
         return new_chat, greeting_turn
 
@@ -287,7 +288,7 @@ class ChatMethods:
                 await self.__requester.ws_close()
 
                 error_comment = raw_response.get('comment', '')
-                raise Exception(f'Cannot update primary candidate. {error_comment}')
+                raise UpdateError(f'Cannot update primary candidate. {error_comment}')
 
             if raw_response["command"] == "ok":
                 break
@@ -364,7 +365,7 @@ class ChatMethods:
                         await self.__requester.ws_close()
 
                         error_comment = raw_response.get("comment", "")
-                        raise Exception(f'Cannot send message. {error_comment}')
+                        raise ActionError(f'Cannot send message. {error_comment}')
 
                     if raw_response["command"] in ["add_turn", "update_turn"]:
                         # Skip first response
@@ -441,7 +442,7 @@ class ChatMethods:
                         await self.__requester.ws_close()
 
                         error_comment = raw_response.get("comment", "")
-                        raise Exception(f'Cannot generate another response. {error_comment}')
+                        raise ActionError(f'Cannot generate another response. {error_comment}')
 
                     if raw_response["command"] == "update_turn":
                         yield Turn(raw_response["turn"])
@@ -485,7 +486,7 @@ class ChatMethods:
                     await self.__requester.ws_close()
 
                     error_comment = raw_response.get("comment", "")
-                    raise Exception(f'Cannot edit message. {error_comment}')
+                    raise EditError(f'Cannot edit message. {error_comment}')
 
                 if raw_response["command"] == "update_turn":
                     return Turn(raw_response["turn"])
@@ -515,7 +516,7 @@ class ChatMethods:
                     await self.__requester.ws_close()
 
                     error_comment = raw_response.get("comment", "")
-                    raise Exception(f'Cannot delete messages. {error_comment}')
+                    raise DeleteError(f'Cannot delete messages. {error_comment}')
 
                 if raw_response["command"] == "remove_turns_response":
                     return True
@@ -551,7 +552,7 @@ class ChatMethods:
                     await self.__requester.ws_close()
 
                     error_comment = raw_response.get("comment", "")
-                    raise Exception(f'Cannot pin message. {error_comment}')
+                    raise ActionError(f'Cannot pin message. {error_comment}')
 
                 if raw_response["command"] == "update_turn":
                     if raw_response["turn"].get("is_pinned", False) is True:
@@ -586,7 +587,7 @@ class ChatMethods:
                     await self.__requester.ws_close()
 
                     error_comment = raw_response.get("comment", "")
-                    raise Exception(f'Cannot unpin message. {error_comment}')
+                    raise ActionError(f'Cannot unpin message. {error_comment}')
 
                 if raw_response["command"] == "update_turn":
                     if raw_response["turn"].get("is_pinned", False) is False:

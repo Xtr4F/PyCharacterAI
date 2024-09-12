@@ -1,7 +1,8 @@
 import json
 from typing import Union, List
 
-from PyCharacterAI.types import *
+from ..types import *
+from ..exceptions import *
 
 
 class UserMethods:
@@ -25,7 +26,7 @@ class UserMethods:
         if request.status_code == 500:
             return None
 
-        raise Exception('Cannot fetch user.')
+        raise FetchError('Cannot fetch user.')
 
     async def fetch_user_voices(self, username: str) -> List[Voice]:
         request = await self.__requester.request(
@@ -41,7 +42,7 @@ class UserMethods:
                 voices.append(Voice(raw_voice))
 
             return voices
-        raise Exception('Cannot fetch user voices.')
+        raise FetchError('Cannot fetch user voices.')
 
     async def follow_user(self, username: str) -> bool:
         request = await self.__requester.request(
@@ -61,7 +62,7 @@ class UserMethods:
             if status == "OK":
                 return True
 
-        raise Exception('Cannot follow user.')
+        raise ActionError('Cannot follow user.')
 
     async def unfollow_user(self, username: str) -> bool:
         request = await self.__requester.request(
@@ -81,4 +82,4 @@ class UserMethods:
             if status == "OK":
                 return True
 
-        raise Exception('Cannot unfollow user.')
+        raise ActionError('Cannot unfollow user.')

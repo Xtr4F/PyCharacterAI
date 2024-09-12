@@ -3,8 +3,9 @@ import json
 
 from typing import List, Dict, Union
 
-from PyCharacterAI.types import *
-from PyCharacterAI.requester import Requester
+from ..types import *
+from ..exceptions import *
+from ..requester import Requester
 
 
 class CharacterMethods:
@@ -31,7 +32,7 @@ class CharacterMethods:
                 characters_by_category[category] = characters
             return characters_by_category
 
-        raise Exception('Cannot fetch characters by category.')
+        raise FetchError('Cannot fetch characters by category.')
 
     async def fetch_recommended_characters(self) -> List[CharacterShort]:
         request = await self.__requester.request(
@@ -47,7 +48,7 @@ class CharacterMethods:
                 characters.append(CharacterShort(character_raw))
             return characters
 
-        raise Exception('Cannot fetch recommended characters.')
+        raise FetchError('Cannot fetch recommended characters.')
 
     async def fetch_featured_characters(self) -> List[CharacterShort]:
         request = await self.__requester.request(
@@ -63,7 +64,7 @@ class CharacterMethods:
                 characters.append(CharacterShort(character_raw))
             return characters
 
-        raise Exception('Cannot fetch featured characters.')
+        raise FetchError('Cannot fetch featured characters.')
 
     async def fetch_similar_characters(self, character_id: str) -> List[CharacterShort]:
         request = await self.__requester.request(
@@ -79,7 +80,7 @@ class CharacterMethods:
                 characters.append(CharacterShort(character_raw))
             return characters
 
-        raise Exception('Cannot fetch similar characters.')
+        raise FetchError('Cannot fetch similar characters.')
 
     async def fetch_character_info(self, character_id: str) -> Character:
         request = await self.__requester.request(
@@ -96,10 +97,10 @@ class CharacterMethods:
 
             if response.get("status", "") == "NOT_OK":
                 error = response.get("error", "")
-                raise Exception(f'Cannot fetch character information. {error}')
+                raise FetchError(f'Cannot fetch character information. {error}')
 
             return Character(response['character'])
-        raise Exception('Cannot fetch character information.')
+        raise FetchError('Cannot fetch character information.')
 
     async def search_characters(self, character_name: str) -> List[CharacterShort]:
         request = await self.__requester.request(
@@ -111,7 +112,7 @@ class CharacterMethods:
             raw_characters = request.json().get('characters', [])
             return [CharacterShort(raw_character) for raw_character in raw_characters]
 
-        raise Exception('Cannot search for characters.')
+        raise SearchError('Cannot search for characters.')
 
     async def search_creators(self, creator_name: str) -> List[str]:
         request = await self.__requester.request(
@@ -123,7 +124,7 @@ class CharacterMethods:
             raw_creators = request.json().get('creators')
             return [creator['name'] for creator in raw_creators]
 
-        raise Exception('Cannot search for creators.')
+        raise SearchError('Cannot search for creators.')
  
     async def character_vote(self, character_id: str, vote: Union[bool, None]) -> bool:
         request = await self.__requester.request(
@@ -140,30 +141,36 @@ class CharacterMethods:
                 return True
             return False
 
-        raise Exception('Cannot vote for character.')
+        raise ActionError('Cannot vote for character.')
 
     async def create_character(self, name: str, greeting: str, title: str = "", description: str = "",
                                definition: str = "", copyable: bool = False, visibility: str = "private",
                                avatar_rel_path: str = "", default_voice_id: str = "") -> Character:
         if len(name) < 3 or len(name) > 20:
-            raise Exception(f"Cannot create character. Name must be at least 3 characters and no more than 20.")
+            raise InvalidArgumentError(f"Cannot create character. "
+                                       f"Name must be at least 3 characters and no more than 20.")
 
         if len(greeting) < 3 or len(greeting) > 2048:
-            raise Exception(f"Cannot create character. Greeting must be at least 3 characters and no more than 2048.")
+            raise InvalidArgumentError(f"Cannot create character. "
+                                       f"Greeting must be at least 3 characters and no more than 2048.")
 
         visibility = visibility.upper()
 
         if visibility not in ["UNLISTED", "PUBLIC", "PRIVATE"]:
-            raise Exception(f"Cannot create character. Visibility must be \"unlisted\", \"public\" or \"private\"")
+            raise InvalidArgumentError(f"Cannot create character. "
+                                       f"Visibility must be \"unlisted\", \"public\" or \"private\"")
 
         if title and (len(title) < 3 or len(title) > 50):
-            raise Exception(f"Cannot create character. Title must be at least 3 characters and no more than 50.")
+            raise InvalidArgumentError(f"Cannot create character. "
+                                       f"Title must be at least 3 characters and no more than 50.")
 
         if description and len(description) > 500:
-            raise Exception(f"Cannot create character. Description must be no more than 500 characters.")
+            raise InvalidArgumentError(f"Cannot create character. "
+                                       f"Description must be no more than 500 characters.")
 
         if definition and len(definition) > 32000:
-            raise Exception(f"Cannot create character. Definition must be no more than 32000 characters.")
+            raise InvalidArgumentError(f"Cannot create character. "
+                                       f"Definition must be no more than 32000 characters.")
 
         request = await self.__requester.request(
             url=f"https://plus.character.ai/chat/character/create/",
@@ -195,31 +202,37 @@ class CharacterMethods:
             if response.get("status", None) == "OK" and response.get("character", None) is not None:
                 return Character(response.get("character"))
 
-            raise Exception(f"Cannot create character. {response.get("error", "")}")
-        raise Exception(f"Cannot create character.")
+            raise CreateError(f"Cannot create character. {response.get('error', '')}")
+        raise CreateError(f"Cannot create character.")
 
     async def edit_character(self, character_id: str, name: str, greeting: str, title: str = "", description: str = "",
                              definition: str = "", copyable: bool = False, visibility: str = "private",
                              avatar_rel_path: str = "", default_voice_id: str = "") -> Character:
         if len(name) < 3 or len(name) > 20:
-            raise Exception(f"Cannot edit character. Name must be at least 3 characters and no more than 20.")
+            raise InvalidArgumentError(f"Cannot edit character. "
+                                       f"Name must be at least 3 characters and no more than 20.")
 
         if len(greeting) < 3 or len(greeting) > 2048:
-            raise Exception(f"Cannot edit character. Greeting must be at least 3 characters and no more than 2048.")
+            raise InvalidArgumentError(f"Cannot edit character. "
+                                       f"Greeting must be at least 3 characters and no more than 2048.")
 
         visibility = visibility.upper()
 
         if visibility not in ["UNLISTED", "PUBLIC", "PRIVATE"]:
-            raise Exception(f"Cannot edit character. Visibility must be \"unlisted\", \"public\" or \"private\"")
+            raise InvalidArgumentError(f"Cannot edit character. "
+                                       f"Visibility must be \"unlisted\", \"public\" or \"private\"")
 
         if title and (len(title) < 3 or len(title) > 50):
-            raise Exception(f"Cannot edit character. Title must be at least 3 characters and no more than 50.")
+            raise InvalidArgumentError(f"Cannot edit character. "
+                                       f"Title must be at least 3 characters and no more than 50.")
 
         if description and len(description) > 500:
-            raise Exception(f"Cannot edit character. Description must be no more than 500 characters.")
+            raise InvalidArgumentError(f"Cannot edit character. "
+                                       f"Description must be no more than 500 characters.")
 
         if definition and len(definition) > 32000:
-            raise Exception(f"Cannot edit character. Definition must be no more than 32000 characters.")
+            raise InvalidArgumentError(f"Cannot edit character. "
+                                       f"Definition must be no more than 32000 characters.")
 
         request = await self.__requester.request(
             url=f"https://plus.character.ai/chat/character/update/",
@@ -252,5 +265,5 @@ class CharacterMethods:
             if response.get("status", None) == "OK" and response.get("character", None) is not None:
                 return Character(response.get("character"))
 
-            raise Exception(f"Cannot edit character. {response.get("error", "")}")
-        raise Exception(f"Cannot edit character.")
+            raise EditError(f"Cannot edit character. {response.get('error', '')}")
+        raise EditError(f"Cannot edit character.")
