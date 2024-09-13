@@ -2,6 +2,7 @@ import uuid
 import json
 
 from typing import List, Dict, Union
+from urllib.parse import quote
 
 from ..types import *
 from ..exceptions import *
@@ -104,7 +105,7 @@ class CharacterMethods:
 
     async def search_characters(self, character_name: str) -> List[CharacterShort]:
         request = await self.__requester.request(
-            url=f"https://plus.character.ai/chat/characters/search/?query={character_name}",
+            url=f"https://plus.character.ai/chat/characters/search/?query={quote(character_name)}",
             options={"headers": self.__client.get_headers()}
         )
 
@@ -116,7 +117,7 @@ class CharacterMethods:
 
     async def search_creators(self, creator_name: str) -> List[str]:
         request = await self.__requester.request(
-            url=f"https://plus.character.ai/chat/creators/search/?query={creator_name}",
+            url=f"https://plus.character.ai/chat/creators/search/?query={quote(creator_name)}",
             options={"headers": self.__client.get_headers()}
         )
 

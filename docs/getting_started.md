@@ -177,14 +177,19 @@ await client.account.unset_voice("character_id")
 ```Python
 # And we can use voice to generate speech from the character's messages
 speech = await client.utils.generate_speech("chat_id", "turn_id", "candidate_id", "voice_id")
+
+# It will return bytes, so we can use it for example like this:
+filepath = "voice.mp3"
+
+with open(filepath, 'wb') as f:
+  f.write(speech)
 ```
-> ```Python
-> # It will return bytes, so we can use it for example like this:
-> filepath = "voice.mp3"
->
-> with open(filepath, 'wb') as f:
->    f.write(speech)
-> ```
+```Python
+# or we can get just the url.
+speech_url = await client.utils.generate_speech("chat_id", "turn_id", "candidate_id", 
+                                            "voice_id", return_url=True)
+
+```
 
 ---
 

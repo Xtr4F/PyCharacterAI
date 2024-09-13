@@ -1,7 +1,9 @@
 import json
 
 import websockets
+
 from curl_cffi.requests import AsyncSession
+
 from typing import AsyncGenerator, Dict
 
 import sys

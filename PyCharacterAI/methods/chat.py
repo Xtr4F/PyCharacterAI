@@ -2,6 +2,7 @@ import uuid
 import json
 
 from typing import Optional, List, Tuple, AsyncGenerator, Any, Union
+from urllib.parse import quote
 
 from ..types import *
 from ..exceptions import *
@@ -40,7 +41,8 @@ class ChatMethods:
         num_preview_turns: int = kwargs.get("num_preview_turns", 2)
 
         request = await self.__requester.request(
-            url=f"https://neo.character.ai/chats/?character_ids={character_id}&num_preview_turns={num_preview_turns}",
+            url=f"https://neo.character.ai/chats/?character_ids={character_id}"
+                f"&num_preview_turns={num_preview_turns}",
             options={
                 "headers": self.__client.get_headers(),
             })
@@ -92,7 +94,7 @@ class ChatMethods:
         url = f"https://neo.character.ai/turns/{chat_id}/"
 
         if next_token:
-            url += f"?next_token={next_token}"
+            url += f"?next_token={quote(next_token)}"
 
         request = await self.__requester.request(
             url=url,

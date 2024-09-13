@@ -189,7 +189,8 @@ async def delete_voice(voice_id: str) -> bool:
 
 ### `generate_speech`
 ```Python
-async def generate_speech(chat_id: str, turn_id: str, candidate_id: str, voice_id: str) -> bytes:
+async def generate_speech(chat_id: str, turn_id: str, candidate_id: str, voice_id: str, 
+                          **kwargs) -> Union[bytes, str]:
 ```
 
 **Description**:\
@@ -201,18 +202,28 @@ async def generate_speech(chat_id: str, turn_id: str, candidate_id: str, voice_i
 - candidate_id: `str` - *id of the message candidate.*
 - voice_id: `str` - *id of the voice.*
 
+**Additional params (kwargs)**:
+- return_url: (optional, default: `False`) - *If you pass `True`, the method will return the url to the generated speech instead of making an additional request to get the `bytes`.* 
+
 
 **Example**:
 ```Python
-speech = await client.utils.generate_speech("chat_id", "turn_id", "candidate_id", "voice_id")
+speech = await client.utils.generate_speech("chat_id", "turn_id", "candidate_id", 
+                                            "voice_id")
 
 filepath = "voice.mp3"
 
 with open(filepath, 'wb') as f:
      f.write(speech)
 ```
+```Python
+# or you can get just the url.
+speech_url = await client.utils.generate_speech("chat_id", "turn_id", "candidate_id", 
+                                            "voice_id", return_url=True)
 
-**Returns**  `bytes`
+```
+
+**Returns**  `bytes` or `str`
 
 ---
   

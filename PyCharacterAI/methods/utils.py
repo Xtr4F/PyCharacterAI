@@ -7,7 +7,7 @@ import mimetypes
 from random import randint
 from typing import List, Union
 
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 
 from ..types import *
 from ..exceptions import *
@@ -42,7 +42,7 @@ class UtilsMethods:
 
     async def search_voices(self, voice_name: str) -> List[Voice]:
         request = await self.__requester.request(
-            url=f"https://neo.character.ai/multimodal/api/v1/voices/search?query={voice_name}",
+            url=f"https://neo.character.ai/multimodal/api/v1/voices/search?query={quote(voice_name)}",
             options={"headers": self.__client.get_headers()}
         )
 
@@ -158,18 +158,32 @@ class UtilsMethods:
         mime, _ = mimetypes.guess_type(voice)
 
         # sequence of 30 random numbers
-        boundary = "".join(["{}".format(randint(0, 9)) for _ in range(0, 30)])
+        boundary_numbers = "".join(["{}".format(randint(0, 9)) for _ in range(0, 30)])
 
-        body = f'-----------------------------{boundary}\r\n'.encode("UTF-8")
-        body += f'Content-Disposition: form-data; name="file"; filename="input.mp3"\r\n'.encode("UTF-8")
-        body += f'Content-Type: {mime}\r\n\r\n'.encode("UTF-8")
+        boundary = f"---------------------------{boundary_numbers}"
+
+        # First part
+        body = (
+            f'--{boundary}\r\n'
+            f'Content-Disposition: form-data; name="file"; filename="input.mp3"\r\n'
+            f'Content-Type: {mime}\r\n\r\n'
+        ).encode("UTF-8")
+
         body += data
-        body += f"\r\n-----------------------------{boundary}\r\n".encode("UTF-8")
-        body += f"Content-Disposition: form-data; name=\"json\"\r\n\r\n".encode("UTF-8")
-        body += ('{"voice":{"name":"name","description":"","gender":"neutral","visibility":"private",'
-                 '"previewText":"Good day! Here to make life a little less complicated.",'
-                 '"audioSourceType":"file"}}\r\n').encode("UTF-8")
-        body += f"-----------------------------{boundary}--\r\n".encode("UTF-8")
+        body += f'\r\n--{boundary}\r\n'.encode("UTF-8")
+
+        # Second part
+        body += (
+            f'Content-Disposition: form-data; name="json"\r\n\r\n'
+            '{"voice":'
+            '{"name":"name",'
+            '"description":"",'
+            '"gender":"neutral",'
+            '"visibility":"private",'
+            '"previewText":"Good day! Here to make life a little less complicated.",'
+            '"audioSourceType":"file"}}'
+            f'\r\n--{boundary}--\r\n'
+        ).encode("UTF-8")
 
         # Uploading
         request = await self.__requester.request(
@@ -177,7 +191,7 @@ class UtilsMethods:
             options={
                 "method": 'POST',
                 "headers": {
-                    "Content-Type": f"multipart/form-data; boundary=---------------------------{boundary}",
+                    "Content-Type": f"multipart/form-data; boundary={boundary}",
                     "authorization": f"Token {self.__client.get_token()}"
                 },
                 "body": body
@@ -271,7 +285,10 @@ class UtilsMethods:
 
         raise DeleteError("Cannot delete voice.")
 
-    async def generate_speech(self, chat_id: str, turn_id: str, candidate_id: str, voice_id: str) -> bytes:
+    async def generate_speech(self, chat_id: str, turn_id: str, candidate_id: str, voice_id: str,
+                              **kwargs) -> Union[bytes, str]:
+        return_url = kwargs.get("return_url", False)
+
         request = await self.__requester.request(
             url="https://neo.character.ai/multimodal/api/v1/memo/replay",
             options={
@@ -293,6 +310,9 @@ class UtilsMethods:
             raise ActionError(f"Cannot generate speech. {error}")
 
         audio_url = response.get("replayUrl", "")
+
+        if return_url:
+            return audio_url
 
         request = await self.__requester.request(
             url=audio_url,

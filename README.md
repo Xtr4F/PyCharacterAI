@@ -163,6 +163,7 @@ asyncio.run(main())
 # (It will return list of urls)
 images = await client.utils.generate_image("prompt")
 ```
+---
 ```Python
 # We can upload an image to use it as an 
 # avatar for character/persona/profile
@@ -179,30 +180,35 @@ avatar = await client.utils.upload_avatar(avatar_file)
 # We can search for voices
 voices = await client.utils.search_voices("name")
 ```
-
+---
 ```Python
 # We can upload the audio as a voice
 voice_file = "path to file or url"
 voice = await client.utils.upload_voice(voice_file, "voice name")
 ```
-
+---
 ```Python
 # We can set and unset a voice for character  
 await client.account.set_voice("character_id", "voice_id")
 await client.account.unset_voice("character_id")
 ```
-
+---
 ```Python
 # And we can use voice to generate speech from the character's messages
 speech = await client.utils.generate_speech("chat_id", "turn_id", "candidate_id", "voice_id")
+
+# It will return bytes, so we can use it for example like this:
+filepath = "voice.mp3"
+
+with open(filepath, 'wb') as f:
+  f.write(speech)
 ```
-> ```Python
-> # It will return bytes, so we can use it for example like this:
-> filepath = "voice.mp3"
->
-> with open(filepath, 'wb') as f:
->    f.write(speech)
-> ```
+```Python
+# or we can get just the url.
+speech_url = await client.utils.generate_speech("chat_id", "turn_id", "candidate_id", 
+                                            "voice_id", return_url=True)
+
+```
 ---
 ## Special Thanks
 - [node_characterai](https://github.com/realcoloride/node_characterai) by @realcoloride - for being the backbone of the project in the past.
