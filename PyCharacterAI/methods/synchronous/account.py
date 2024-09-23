@@ -2,9 +2,10 @@ import uuid
 import json
 from typing import List, Dict, Union
 
-from ..types import *
-from ..exceptions import *
-from ..requester import Requester
+from ...types import Account, Persona, CharacterShort, Voice
+from ...exceptions import (FetchError, EditError, UpdateError, CreateError,
+                           SetError, InvalidArgumentError, DeleteError)
+from ...requester import Requester
 
 
 class AccountMethods:
@@ -12,8 +13,8 @@ class AccountMethods:
         self.__client = client
         self.__requester = requester
 
-    async def fetch_me(self) -> Account:
-        request = await self.__requester.request(
+    def fetch_me(self) -> Account:
+        request = self.__requester.request(
             url='https://plus.character.ai/chat/user/',
             options={"headers": self.__client.get_headers()}
         )
@@ -23,8 +24,8 @@ class AccountMethods:
         
         raise FetchError('Cannot fetch your account.')
 
-    async def fetch_my_settings(self) -> Dict:
-        request = await self.__requester.request(
+    def fetch_my_settings(self) -> Dict:
+        request = self.__requester.request(
             url="https://plus.character.ai/chat/user/settings/",
             options={"headers": self.__client.get_headers()}
         )
@@ -34,8 +35,8 @@ class AccountMethods:
 
         raise FetchError('Cannot fetch your settings.')
 
-    async def fetch_my_followers(self) -> List:
-        request = await self.__requester.request(
+    def fetch_my_followers(self) -> List:
+        request = self.__requester.request(
             url='https://plus.character.ai/chat/user/followers/',
             options={"headers": self.__client.get_headers()}
         )
@@ -45,8 +46,8 @@ class AccountMethods:
 
         raise FetchError('Cannot fetch your followers.')
 
-    async def fetch_my_following(self) -> List:
-        request = await self.__requester.request(
+    def fetch_my_following(self) -> List:
+        request = self.__requester.request(
             url='https://plus.character.ai/chat/user/following/',
             options={"headers": self.__client.get_headers()}
         )
@@ -56,8 +57,8 @@ class AccountMethods:
 
         raise FetchError('Cannot fetch your following.')
 
-    async def fetch_my_persona(self, persona_id: str) -> Persona:
-        request = await self.__requester.request(
+    def fetch_my_persona(self, persona_id: str) -> Persona:
+        request = self.__requester.request(
             url=f"https://plus.character.ai/chat/persona/?id={persona_id}",
             options={"headers": self.__client.get_headers()}
         )
@@ -69,8 +70,8 @@ class AccountMethods:
 
         raise FetchError('Cannot fetch your persona. Maybe persona does not exist?')
 
-    async def fetch_my_personas(self) -> List[Persona]:
-        request = await self.__requester.request(
+    def fetch_my_personas(self) -> List[Persona]:
+        request = self.__requester.request(
             url="https://plus.character.ai/chat/personas/?force_refresh=1",
             options={"headers": self.__client.get_headers()}
         )
@@ -86,8 +87,8 @@ class AccountMethods:
 
         raise FetchError('Cannot fetch your personas.')
 
-    async def fetch_my_characters(self) -> List[CharacterShort]:
-        request = await self.__requester.request(
+    def fetch_my_characters(self) -> List[CharacterShort]:
+        request = self.__requester.request(
             url="https://plus.character.ai/chat/characters/?scope=user",
             options={"headers": self.__client.get_headers()}
         )
@@ -103,8 +104,8 @@ class AccountMethods:
 
         raise FetchError('Cannot fetch your characters.')
 
-    async def fetch_my_upvoted_characters(self) -> List[CharacterShort]:
-        request = await self.__requester.request(
+    def fetch_my_upvoted_characters(self) -> List[CharacterShort]:
+        request = self.__requester.request(
             url=f'https://plus.character.ai/chat/user/characters/upvoted/',
             options={"headers": self.__client.get_headers()}
         )
@@ -119,8 +120,8 @@ class AccountMethods:
 
         raise FetchError('Cannot fetch your upvoted characters.')
 
-    async def fetch_my_voices(self) -> List[Voice]:
-        request = await self.__requester.request(
+    def fetch_my_voices(self) -> List[Voice]:
+        request = self.__requester.request(
             url=f"https://neo.character.ai/multimodal/api/v1/voices/user",
             options={"headers": self.__client.get_headers()}
         )
@@ -135,7 +136,7 @@ class AccountMethods:
             return voices
         raise FetchError('Cannot fetch your voices.')
 
-    async def __update_settings(self, options: Dict) -> Dict:
+    def __update_settings(self, options: Dict) -> Dict:
         default_persona_id = options.get("default_persona_id", None)
         persona_override = options.get("persona_override", None)
         voice_override = options.get("voice_override", None)
@@ -144,7 +145,7 @@ class AccountMethods:
         if default_persona_id is None and persona_override is None and voice_override is None:
             raise UpdateError('Cannot update account settings.')
 
-        settings = await self.fetch_my_settings()
+        settings = self.fetch_my_settings()
 
         if default_persona_id is not None:
             settings["default_persona_id"] = default_persona_id
@@ -155,7 +156,7 @@ class AccountMethods:
 
             settings["personaOverrides"] = persona_overrides
 
-        request = await self.__requester.request(
+        request = self.__requester.request(
             url="https://plus.character.ai/chat/user/update_settings/",
             options={
                 "method": 'POST',
@@ -172,7 +173,7 @@ class AccountMethods:
 
         raise UpdateError('Cannot update account settings.')
 
-    async def edit_account(self, name: str, username: str, bio: str = "", avatar_rel_path: str = "") -> bool:
+    def edit_account(self, name: str, username: str, bio: str = "", avatar_rel_path: str = "") -> bool:
         if len(username) < 2 or len(name) > 20:
             raise InvalidArgumentError(f"Cannot edit account info. "
                                        f"Username must be at least 2 characters and no more than 20.")
@@ -195,7 +196,7 @@ class AccountMethods:
         if avatar_rel_path:
             new_account_info["avatar_rel_path"] = avatar_rel_path
 
-        request = await self.__requester.request(
+        request = self.__requester.request(
             url='https://plus.character.ai/chat/user/update/',
             options={
                 "method": 'POST',
@@ -213,7 +214,7 @@ class AccountMethods:
             raise EditError(f"Cannot edit account info. {status}")
         raise EditError('Cannot edit account info.')
 
-    async def create_persona(self, name: str, definition: str = "", avatar_rel_path: str = "") -> Persona:
+    def create_persona(self, name: str, definition: str = "", avatar_rel_path: str = "") -> Persona:
         if len(name) < 3 or len(name) > 20:
             raise InvalidArgumentError(f"Cannot create persona. "
                                        f"Name must be at least 3 characters and no more than 20.")
@@ -222,7 +223,7 @@ class AccountMethods:
             raise InvalidArgumentError(f"Cannot create persona. "
                                        f"Definition must be no more than 728 characters.")
 
-        request = await self.__requester.request(
+        request = self.__requester.request(
             url=f"https://plus.character.ai/chat/character/create/",
             options={
                 "method": 'POST',
@@ -255,7 +256,7 @@ class AccountMethods:
             raise CreateError(f"Cannot create persona. {response.get('error', '')}")
         raise CreateError(f"Cannot create persona.")
 
-    async def edit_persona(self, persona_id: str, name: str = "", definition: str = "",
+    def edit_persona(self, persona_id: str, name: str = "", definition: str = "",
                            avatar_rel_path: str = "") -> Persona:
         if name and (len(name) < 3 or len(name) > 20):
             raise InvalidArgumentError(f"Cannot edit persona. "
@@ -266,7 +267,7 @@ class AccountMethods:
                                        f"Definition must be no more than 728 characters.")
 
         try:
-            old_persona = await self.fetch_my_persona(persona_id)
+            old_persona = self.fetch_my_persona(persona_id)
         except Exception:
             raise EditError("Cannot edit persona. May be persona does not exist?")
 
@@ -295,7 +296,7 @@ class AccountMethods:
             payload["avatar_file_name"] = avatar_rel_path
             payload["avatar_rel_path"] = avatar_rel_path
 
-        request = await self.__requester.request(
+        request = self.__requester.request(
             url=f"https://plus.character.ai/chat/persona/update/",
             options={
                 "method": 'POST',
@@ -312,9 +313,9 @@ class AccountMethods:
             raise EditError(f"Cannot edit persona. {response.get('error', '')}")
         raise EditError(f"Cannot edit persona.")
 
-    async def delete_persona(self, persona_id: str) -> bool:
+    def delete_persona(self, persona_id: str) -> bool:
         try:
-            old_persona = await self.fetch_my_persona(persona_id)
+            old_persona = self.fetch_my_persona(persona_id)
         except Exception:
             raise DeleteError("Cannot delete persona. May be persona does not exist?")
 
@@ -338,7 +339,7 @@ class AccountMethods:
             "visibility": "PRIVATE"
         }
 
-        request = await self.__requester.request(
+        request = self.__requester.request(
             url=f"https://plus.character.ai/chat/persona/update/",
             options={
                 "method": 'POST',
@@ -355,25 +356,25 @@ class AccountMethods:
             raise DeleteError(f"Cannot delete persona. {response.get('error', '')}")
         raise DeleteError(f"Cannot delete persona.")
 
-    async def set_default_persona(self, persona_id: Union[str, None]) -> bool:
+    def set_default_persona(self, persona_id: Union[str, None]) -> bool:
         try:
             if persona_id is None:
                 persona_id = ""
 
-            await self.__update_settings({"default_persona_id": persona_id})
+            self.__update_settings({"default_persona_id": persona_id})
             return True
         except Exception:
             raise SetError(f"Cannot set default persona.")
 
-    async def unset_default_persona(self) -> bool:
-        return await self.set_default_persona(None)
+    def unset_default_persona(self) -> bool:
+        return self.set_default_persona(None)
 
-    async def set_persona(self, character_id: str, persona_id: Union[str, None]) -> bool:
+    def set_persona(self, character_id: str, persona_id: Union[str, None]) -> bool:
         try:
             if persona_id is None:
                 persona_id = ""
 
-            await self.__update_settings({
+            self.__update_settings({
                     "persona_override": persona_id,
                     "character_id": character_id
             })
@@ -381,13 +382,13 @@ class AccountMethods:
         except Exception:
             raise SetError(f"Cannot set persona.")
     
-    async def unset_persona(self, character_id: str) -> bool:
-        return await self.set_persona(character_id, None)
+    def unset_persona(self, character_id: str) -> bool:
+        return self.set_persona(character_id, None)
 
-    async def set_voice(self, character_id: str, voice_id: Union[str, None]) -> bool:
+    def set_voice(self, character_id: str, voice_id: Union[str, None]) -> bool:
         method = "update" if voice_id else "delete"
 
-        request = await self.__requester.request(
+        request = self.__requester.request(
             url=f"https://plus.character.ai/chat/character/{character_id}/voice_override/{method}/",
             options={
                 "method": 'POST',
@@ -402,5 +403,5 @@ class AccountMethods:
 
         raise SetError(f"Cannot set voice.")
 
-    async def unset_voice(self, character_id: str) -> bool:
-        return await self.set_voice(character_id, None)
+    def unset_voice(self, character_id: str) -> bool:
+        return self.set_voice(character_id, None)

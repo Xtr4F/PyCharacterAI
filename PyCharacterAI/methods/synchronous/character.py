@@ -4,9 +4,10 @@ import json
 from typing import List, Dict, Union
 from urllib.parse import quote
 
-from ..types import *
-from ..exceptions import *
-from ..requester import Requester
+from ...types import Character, CharacterShort
+from ...exceptions import (FetchError, EditError, CreateError, SearchError,
+                           ActionError, InvalidArgumentError)
+from ...requester import Requester
 
 
 class CharacterMethods:
@@ -14,8 +15,8 @@ class CharacterMethods:
         self.__client = client
         self.__requester = requester
 
-    async def fetch_characters_by_category(self) -> Dict[str, List[CharacterShort]]:
-        request = await self.__requester.request(
+    def fetch_characters_by_category(self) -> Dict[str, List[CharacterShort]]:
+        request = self.__requester.request(
             url="https://plus.character.ai/chat/curated_categories/characters/",
             options={"headers": self.__client.get_headers()}
         )
@@ -35,8 +36,8 @@ class CharacterMethods:
 
         raise FetchError('Cannot fetch characters by category.')
 
-    async def fetch_recommended_characters(self) -> List[CharacterShort]:
-        request = await self.__requester.request(
+    def fetch_recommended_characters(self) -> List[CharacterShort]:
+        request = self.__requester.request(
             url=f'https://neo.character.ai/recommendation/v1/user',
             options={"headers": self.__client.get_headers()}
         )
@@ -51,8 +52,8 @@ class CharacterMethods:
 
         raise FetchError('Cannot fetch recommended characters.')
 
-    async def fetch_featured_characters(self) -> List[CharacterShort]:
-        request = await self.__requester.request(
+    def fetch_featured_characters(self) -> List[CharacterShort]:
+        request = self.__requester.request(
             url='https://plus.character.ai/chat/characters/featured_v2/',
             options={"headers": self.__client.get_headers()}
         )
@@ -67,8 +68,8 @@ class CharacterMethods:
 
         raise FetchError('Cannot fetch featured characters.')
 
-    async def fetch_similar_characters(self, character_id: str) -> List[CharacterShort]:
-        request = await self.__requester.request(
+    def fetch_similar_characters(self, character_id: str) -> List[CharacterShort]:
+        request = self.__requester.request(
             url=f'https://neo.character.ai/recommendation/v1/character/{character_id}',
             options={"headers": self.__client.get_headers()}
         )
@@ -83,8 +84,8 @@ class CharacterMethods:
 
         raise FetchError('Cannot fetch similar characters.')
 
-    async def fetch_character_info(self, character_id: str) -> Character:
-        request = await self.__requester.request(
+    def fetch_character_info(self, character_id: str) -> Character:
+        request = self.__requester.request(
             url=f"https://plus.character.ai/chat/character/info/",
             options={
                 "method": 'POST',
@@ -103,8 +104,8 @@ class CharacterMethods:
             return Character(response['character'])
         raise FetchError('Cannot fetch character information.')
 
-    async def search_characters(self, character_name: str) -> List[CharacterShort]:
-        request = await self.__requester.request(
+    def search_characters(self, character_name: str) -> List[CharacterShort]:
+        request = self.__requester.request(
             url=f"https://plus.character.ai/chat/characters/search/?query={quote(character_name)}",
             options={"headers": self.__client.get_headers()}
         )
@@ -115,8 +116,8 @@ class CharacterMethods:
 
         raise SearchError('Cannot search for characters.')
 
-    async def search_creators(self, creator_name: str) -> List[str]:
-        request = await self.__requester.request(
+    def search_creators(self, creator_name: str) -> List[str]:
+        request = self.__requester.request(
             url=f"https://plus.character.ai/chat/creators/search/?query={quote(creator_name)}",
             options={"headers": self.__client.get_headers()}
         )
@@ -127,8 +128,8 @@ class CharacterMethods:
 
         raise SearchError('Cannot search for creators.')
  
-    async def character_vote(self, character_id: str, vote: Union[bool, None]) -> bool:
-        request = await self.__requester.request(
+    def character_vote(self, character_id: str, vote: Union[bool, None]) -> bool:
+        request = self.__requester.request(
             url=f"https://plus.character.ai/chat/character/vote/",
             options={
                 "method": 'POST',
@@ -144,7 +145,7 @@ class CharacterMethods:
 
         raise ActionError('Cannot vote for character.')
 
-    async def create_character(self, name: str, greeting: str, title: str = "", description: str = "",
+    def create_character(self, name: str, greeting: str, title: str = "", description: str = "",
                                definition: str = "", copyable: bool = False, visibility: str = "private",
                                avatar_rel_path: str = "", default_voice_id: str = "") -> Character:
         if len(name) < 3 or len(name) > 20:
@@ -173,7 +174,7 @@ class CharacterMethods:
             raise InvalidArgumentError(f"Cannot create character. "
                                        f"Definition must be no more than 32000 characters.")
 
-        request = await self.__requester.request(
+        request = self.__requester.request(
             url=f"https://plus.character.ai/chat/character/create/",
             options={
                 "method": 'POST',
@@ -206,7 +207,7 @@ class CharacterMethods:
             raise CreateError(f"Cannot create character. {response.get('error', '')}")
         raise CreateError(f"Cannot create character.")
 
-    async def edit_character(self, character_id: str, name: str, greeting: str, title: str = "", description: str = "",
+    def edit_character(self, character_id: str, name: str, greeting: str, title: str = "", description: str = "",
                              definition: str = "", copyable: bool = False, visibility: str = "private",
                              avatar_rel_path: str = "", default_voice_id: str = "") -> Character:
         if len(name) < 3 or len(name) > 20:
@@ -235,7 +236,7 @@ class CharacterMethods:
             raise InvalidArgumentError(f"Cannot edit character. "
                                        f"Definition must be no more than 32000 characters.")
 
-        request = await self.__requester.request(
+        request = self.__requester.request(
             url=f"https://plus.character.ai/chat/character/update/",
             options={
                 "method": 'POST',

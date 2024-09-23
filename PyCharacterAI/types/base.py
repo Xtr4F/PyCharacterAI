@@ -1,5 +1,8 @@
+from typing import Dict
+
+
 class BaseCAI:
-    def __init__(self, options: dict):
+    def __init__(self, options: Dict):
         self.__raw = options
 
     def get_dict(self, raw: bool = False):

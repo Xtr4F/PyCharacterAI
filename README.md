@@ -11,8 +11,38 @@
 
 
 ---
-**TO-DO**:
-- [ ] Synchronous version.
+**TO-DO**:client = Client(proxy="127.0.0.1:8080", verify=False)
+    await client.authenticate(token)
+    
+    me = await client.account.fetch_me()
+    print(f"Authenticated as @{me.username}")
+        
+    characters = await client.character.search_characters("Jotaro Kujo")
+    character = characters[0]
+
+    print(f"[CHAR] {character.name} | {character.description}\n")
+
+    chat, greeting_message = await client.chat.create_chat(character.character_id)
+
+    print(f"[{greeting_message.author_name}]: {greeting_message.get_primary_candidate().text}")
+
+    while True:
+        message = input(f"[{me.name}]: ")
+
+        answer = await client.chat.send_message(character.character_id, chat.chat_id, message, streaming=True)
+
+        printed_length = 0
+        async for message in answer:
+            if printed_length == 0:
+                print(f"[{message.author_name}]: ", end="")
+
+            text = message.get_primary_candidate().text
+            print(text[printed_length:], end="")
+
+            printed_length = len(text)
+        print("\n")
+
+- [x] Synchronous version.
 - [x] Exceptions.
 - [ ] Logging?
 - [ ] Finish the docs.

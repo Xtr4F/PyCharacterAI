@@ -32,7 +32,7 @@ class CharacterShort(BaseCAI):
 
 
 class Character(BaseCAI):
-    def __init__(self, options: dict):
+    def __init__(self, options: Dict):
         super().__init__(options)
 
         self.character_id = options.get("external_id")

@@ -1,3 +1,5 @@
-from PyCharacterAI.client import Client
+from .client import SyncClient, AsyncClient
 
-__all__ = ['Client']
+from .client import AsyncClient as Client
+
+__all__ = ['Client', 'SyncClient', 'AsyncClient']

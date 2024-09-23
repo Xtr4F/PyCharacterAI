@@ -8,7 +8,7 @@ def readme():
 
 setup(
     name='PyCharacterAI',
-    version='2.0.2',
+    version='2.1.0',
     author='XtraF',
     author_email='igoromarov15@gmail.com',
     description='An unofficial asynchronous api wrapper for Character AI.',
@@ -16,8 +16,7 @@ setup(
     long_description_content_type='text/markdown',
     url='https://github.com/Xtr4F/PyCharacterAI',
     packages=find_packages(),
-    install_requires=['websockets',
-                      'curl-cffi'],
+    install_requires=['curl-cffi'],
     classifiers=[
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
