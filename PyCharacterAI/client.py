@@ -1,9 +1,9 @@
 from typing import Union
 
-from PyCharacterAI import methods
+from . import methods
 
-from PyCharacterAI.exceptions import AuthenticationError
-from PyCharacterAI.requester import Requester
+from .exceptions import AuthenticationError
+from .requester import Requester
 
 
 class BaseClient:

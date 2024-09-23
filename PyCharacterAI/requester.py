@@ -8,7 +8,7 @@ from curl_cffi import CurlWsFlag, CurlError, CurlECode
 from curl_cffi.requests import AsyncSession, Session, WebSocket
 
 
-from PyCharacterAI.exceptions import PyCAIError
+from .exceptions import PyCAIError
 
 
 class Requester:
