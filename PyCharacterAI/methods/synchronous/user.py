@@ -11,12 +11,12 @@ class UserMethods:
         self.__client = client
         self.__requester = requester
 
-    def fetch_user(self, username: str) -> Union[PublicUser, None]:
+    def fetch_user(self, username: str, **kwargs) -> Union[PublicUser, None]:
         request = self.__requester.request(
             url='https://plus.character.ai/chat/user/public/', 
             options={
                 "method": 'POST',
-                "headers": self.__client.get_headers(),
+                "headers": self.__client.get_headers(kwargs.get("token", None)),
                 "body": json.dumps({'username': username})
             }
         )
@@ -29,10 +29,10 @@ class UserMethods:
 
         raise FetchError('Cannot fetch user.')
 
-    def fetch_user_voices(self, username: str) -> List[Voice]:
+    def fetch_user_voices(self, username: str, **kwargs) -> List[Voice]:
         request = self.__requester.request(
             url=f"https://neo.character.ai/multimodal/api/v1/voices/search?creatorInfo.username={username}",
-            options={"headers": self.__client.get_headers()}
+            options={"headers": self.__client.get_headers(kwargs.get("token", None))}
         )
 
         if request.status_code == 200:
@@ -45,12 +45,12 @@ class UserMethods:
             return voices
         raise FetchError('Cannot fetch user voices.')
 
-    def follow_user(self, username: str) -> bool:
+    def follow_user(self, username: str, **kwargs) -> bool:
         request = self.__requester.request(
             url='https://plus.character.ai/chat/user/follow/',
             options={
                 "method": 'POST',
-                "headers": self.__client.get_headers(),
+                "headers": self.__client.get_headers(kwargs.get("token", None)),
                 "body": json.dumps({
                     "username": username
                 })
@@ -65,12 +65,12 @@ class UserMethods:
 
         raise ActionError('Cannot follow user.')
 
-    def unfollow_user(self, username: str) -> bool:
+    def unfollow_user(self, username: str, **kwargs) -> bool:
         request = self.__requester.request(
             url='https://plus.character.ai/chat/user/unfollow/',
             options={
                 "method": 'POST',
-                "headers": self.__client.get_headers(),
+                "headers": self.__client.get_headers(kwargs.get("token", None)),
                 "body": json.dumps({
                     "username": username
                 })

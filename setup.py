@@ -8,10 +8,10 @@ def readme():
 
 setup(
     name='PyCharacterAI',
-    version='2.1.0',
+    version='2.1.1',
     author='XtraF',
     author_email='igoromarov15@gmail.com',
-    description='An unofficial asynchronous api wrapper for Character AI.',
+    description='An unofficial api wrapper for Character AI.',
     long_description=readme(),
     long_description_content_type='text/markdown',
     url='https://github.com/Xtr4F/PyCharacterAI',

@@ -15,10 +15,10 @@ class CharacterMethods:
         self.__client = client
         self.__requester = requester
 
-    def fetch_characters_by_category(self) -> Dict[str, List[CharacterShort]]:
+    def fetch_characters_by_category(self, **kwargs) -> Dict[str, List[CharacterShort]]:
         request = self.__requester.request(
             url="https://plus.character.ai/chat/curated_categories/characters/",
-            options={"headers": self.__client.get_headers()}
+            options={"headers": self.__client.get_headers(kwargs.get("token", None))}
         )
 
         if request.status_code == 200:
@@ -36,10 +36,10 @@ class CharacterMethods:
 
         raise FetchError('Cannot fetch characters by category.')
 
-    def fetch_recommended_characters(self) -> List[CharacterShort]:
+    def fetch_recommended_characters(self, **kwargs) -> List[CharacterShort]:
         request = self.__requester.request(
             url=f'https://neo.character.ai/recommendation/v1/user',
-            options={"headers": self.__client.get_headers()}
+            options={"headers": self.__client.get_headers(kwargs.get("token", None))}
         )
 
         if request.status_code == 200:
@@ -52,10 +52,10 @@ class CharacterMethods:
 
         raise FetchError('Cannot fetch recommended characters.')
 
-    def fetch_featured_characters(self) -> List[CharacterShort]:
+    def fetch_featured_characters(self, **kwargs) -> List[CharacterShort]:
         request = self.__requester.request(
             url='https://plus.character.ai/chat/characters/featured_v2/',
-            options={"headers": self.__client.get_headers()}
+            options={"headers": self.__client.get_headers(kwargs.get("token", None))}
         )
 
         if request.status_code == 200:
@@ -68,10 +68,10 @@ class CharacterMethods:
 
         raise FetchError('Cannot fetch featured characters.')
 
-    def fetch_similar_characters(self, character_id: str) -> List[CharacterShort]:
+    def fetch_similar_characters(self, character_id: str, **kwargs) -> List[CharacterShort]:
         request = self.__requester.request(
             url=f'https://neo.character.ai/recommendation/v1/character/{character_id}',
-            options={"headers": self.__client.get_headers()}
+            options={"headers": self.__client.get_headers(kwargs.get("token", None))}
         )
 
         if request.status_code == 200:
@@ -84,12 +84,12 @@ class CharacterMethods:
 
         raise FetchError('Cannot fetch similar characters.')
 
-    def fetch_character_info(self, character_id: str) -> Character:
+    def fetch_character_info(self, character_id: str, **kwargs) -> Character:
         request = self.__requester.request(
             url=f"https://plus.character.ai/chat/character/info/",
             options={
                 "method": 'POST',
-                "headers": self.__client.get_headers(),
+                "headers": self.__client.get_headers(kwargs.get("token", None)),
                 "body": json.dumps({"external_id": character_id})
             }
         )
@@ -104,10 +104,10 @@ class CharacterMethods:
             return Character(response['character'])
         raise FetchError('Cannot fetch character information.')
 
-    def search_characters(self, character_name: str) -> List[CharacterShort]:
+    def search_characters(self, character_name: str, **kwargs) -> List[CharacterShort]:
         request = self.__requester.request(
             url=f"https://plus.character.ai/chat/characters/search/?query={quote(character_name)}",
-            options={"headers": self.__client.get_headers()}
+            options={"headers": self.__client.get_headers(kwargs.get("token", None))}
         )
 
         if request.status_code == 200:
@@ -116,10 +116,10 @@ class CharacterMethods:
 
         raise SearchError('Cannot search for characters.')
 
-    def search_creators(self, creator_name: str) -> List[str]:
+    def search_creators(self, creator_name: str, **kwargs) -> List[str]:
         request = self.__requester.request(
             url=f"https://plus.character.ai/chat/creators/search/?query={quote(creator_name)}",
-            options={"headers": self.__client.get_headers()}
+            options={"headers": self.__client.get_headers(kwargs.get("token", None))}
         )
 
         if request.status_code == 200:
@@ -128,12 +128,12 @@ class CharacterMethods:
 
         raise SearchError('Cannot search for creators.')
  
-    def character_vote(self, character_id: str, vote: Union[bool, None]) -> bool:
+    def character_vote(self, character_id: str, vote: Union[bool, None], **kwargs) -> bool:
         request = self.__requester.request(
             url=f"https://plus.character.ai/chat/character/vote/",
             options={
                 "method": 'POST',
-                "headers": self.__client.get_headers(),
+                "headers": self.__client.get_headers(kwargs.get("token", None)),
                 "body": json.dumps({"external_id": character_id, "vote": vote})
             }
         )
@@ -146,8 +146,8 @@ class CharacterMethods:
         raise ActionError('Cannot vote for character.')
 
     def create_character(self, name: str, greeting: str, title: str = "", description: str = "",
-                               definition: str = "", copyable: bool = False, visibility: str = "private",
-                               avatar_rel_path: str = "", default_voice_id: str = "") -> Character:
+                         definition: str = "", copyable: bool = False, visibility: str = "private",
+                         avatar_rel_path: str = "", default_voice_id: str = "", **kwargs) -> Character:
         if len(name) < 3 or len(name) > 20:
             raise InvalidArgumentError(f"Cannot create character. "
                                        f"Name must be at least 3 characters and no more than 20.")
@@ -178,7 +178,7 @@ class CharacterMethods:
             url=f"https://plus.character.ai/chat/character/create/",
             options={
                 "method": 'POST',
-                "headers": self.__client.get_headers(),
+                "headers": self.__client.get_headers(kwargs.get("token", None)),
                 "body": json.dumps({
                     "avatar_rel_path": avatar_rel_path,
                     "base_img_prompt": "",
@@ -208,8 +208,8 @@ class CharacterMethods:
         raise CreateError(f"Cannot create character.")
 
     def edit_character(self, character_id: str, name: str, greeting: str, title: str = "", description: str = "",
-                             definition: str = "", copyable: bool = False, visibility: str = "private",
-                             avatar_rel_path: str = "", default_voice_id: str = "") -> Character:
+                       definition: str = "", copyable: bool = False, visibility: str = "private",
+                       avatar_rel_path: str = "", default_voice_id: str = "", **kwargs) -> Character:
         if len(name) < 3 or len(name) > 20:
             raise InvalidArgumentError(f"Cannot edit character. "
                                        f"Name must be at least 3 characters and no more than 20.")
@@ -240,7 +240,7 @@ class CharacterMethods:
             url=f"https://plus.character.ai/chat/character/update/",
             options={
                 "method": 'POST',
-                "headers": self.__client.get_headers(),
+                "headers": self.__client.get_headers(kwargs.get("token", None)),
                 "body": json.dumps({
                     "archived": False,
                     "avatar_rel_path": avatar_rel_path,

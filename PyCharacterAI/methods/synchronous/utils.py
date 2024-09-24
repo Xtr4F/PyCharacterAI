@@ -20,20 +20,20 @@ class UtilsMethods:
         self.__client = client
         self.__requester = requester
 
-    def ping(self) -> bool:
+    def ping(self, **kwargs) -> bool:
         request = self.__requester.request(
             url="https://neo.character.ai/ping/",
-            options={"headers": self.__client.get_headers()}
+            options={"headers": self.__client.get_headers(kwargs.get("token", None))}
         )
 
         if request.status_code == 200:
             return True
         return False
 
-    def fetch_voice(self, voice_id) -> Voice:
+    def fetch_voice(self, voice_id, **kwargs) -> Voice:
         request = self.__requester.request(
             url=f"https://neo.character.ai/multimodal/api/v1/voices/{voice_id}",
-            options={"headers": self.__client.get_headers()}
+            options={"headers": self.__client.get_headers(kwargs.get("token", None))}
         )
 
         if request.status_code == 200:
@@ -41,10 +41,10 @@ class UtilsMethods:
 
         raise FetchError('Cannot fetch voice. Maybe voice does not exist?')
 
-    def search_voices(self, voice_name: str) -> List[Voice]:
+    def search_voices(self, voice_name: str, **kwargs) -> List[Voice]:
         request = self.__requester.request(
             url=f"https://neo.character.ai/multimodal/api/v1/voices/search?query={quote(voice_name)}",
-            options={"headers": self.__client.get_headers()}
+            options={"headers": self.__client.get_headers(kwargs.get("token", None))}
         )
 
         if request.status_code == 200:
@@ -60,7 +60,7 @@ class UtilsMethods:
             url='https://plus.character.ai/chat/character/generate-avatar-options',
             options={
                 "method": 'POST',
-                "headers": self.__client.get_headers(),
+                "headers": self.__client.get_headers(kwargs.get("token", None)),
                 "body": json.dumps(
                     {
                         "prompt": prompt,
@@ -84,7 +84,7 @@ class UtilsMethods:
             return urls
         raise ActionError('Cannot generate image.')
 
-    def upload_avatar(self, image: str, check_image: bool = True) -> Avatar:
+    def upload_avatar(self, image: str, check_image: bool = True, **kwargs) -> Avatar:
         if os.path.isfile(image):
             with open(image, 'rb') as image_file:
                 data = base64.b64encode(image_file.read())
@@ -105,7 +105,9 @@ class UtilsMethods:
             url="https://character.ai/api/trpc/user.uploadAvatar?batch=1",
             options={
                 "method": 'POST',
-                "headers": self.__client.get_headers(include_web_next_auth=True),
+                "headers": self.__client.get_headers(token=kwargs.get("token", None),
+                                                     web_next_auth=kwargs.get("web_next_auth", None),
+                                                     include_web_next_auth=True),
                 "body": json.dumps({"0": {"json": {"imageDataUrl": image_url}}})
             }
         )
@@ -128,7 +130,7 @@ class UtilsMethods:
             raise UploadError("Cannot upload avatar. Maybe your web_next_auth token is invalid, "
                               "or your image is too large, or your image didn't pass the filter.")
 
-    def upload_voice(self, voice: str, name: str, description: str = "", visibility: str = "private") -> Voice:
+    def upload_voice(self, voice: str, name: str, description: str = "", visibility: str = "private", **kwargs) -> Voice:
         if len(name) < 3 or len(name) > 20:
             raise InvalidArgumentError(f"Cannot upload voice. "
                                        f"Name must be at least 3 characters and no more than 20.")
@@ -193,7 +195,7 @@ class UtilsMethods:
                 "method": 'POST',
                 "headers": {
                     "Content-Type": f"multipart/form-data; boundary={boundary}",
-                    "authorization": f"Token {self.__client.get_token()}"
+                    "authorization": f"Token {kwargs.get("token") or self.__client.get_token()}"
                 },
                 "body": body
             }
@@ -203,7 +205,7 @@ class UtilsMethods:
         if request.status_code in [200, 201]:
             try:
                 new_voice = Voice(request.json().get("voice"))
-                final_voice = self.edit_voice(new_voice, name, description, visibility)
+                final_voice = self.edit_voice(new_voice, name, description, visibility, **kwargs)
 
                 return final_voice
 
@@ -213,9 +215,9 @@ class UtilsMethods:
         raise UploadError("Cannot upload voice. May be your audio is invalid?")
 
     def edit_voice(self, voice: Union[str, Voice], name: str = None, description: str = None,
-                   visibility: str = None) -> Voice:
+                   visibility: str = None, **kwargs) -> Voice:
         if not isinstance(voice, Voice):
-            voice = self.fetch_voice(voice)
+            voice = self.fetch_voice(voice, **kwargs)
 
         if not name:
             name = voice.name
@@ -244,7 +246,7 @@ class UtilsMethods:
             url=f"https://neo.character.ai/multimodal/api/v1/voices/{voice.voice_id}",
             options={
                 "method": 'PUT',
-                "headers": self.__client.get_headers(),
+                "headers": self.__client.get_headers(kwargs.get("token", None)),
                 "body": json.dumps(
                     {"voice": {
                           "audioSourceType": "file",
@@ -272,12 +274,12 @@ class UtilsMethods:
 
         raise EditError("Cannot edit voice. Maybe your audio is invalid?")
 
-    def delete_voice(self, voice_id: str) -> bool:
+    def delete_voice(self, voice_id: str, **kwargs) -> bool:
         request = self.__requester.request(
             url=f"https://neo.character.ai/multimodal/api/v1/voices/{voice_id}",
             options={
                 "method": "DELETE",
-                "headers": self.__client.get_headers()
+                "headers": self.__client.get_headers(kwargs.get("token", None))
             }
         )
 
@@ -294,7 +296,7 @@ class UtilsMethods:
             url="https://neo.character.ai/multimodal/api/v1/memo/replay",
             options={
                 "method": 'POST',
-                "headers": self.__client.get_headers(),
+                "headers": self.__client.get_headers(kwargs.get("token", None)),
                 "body": json.dumps({
                     "candidateId": candidate_id,
                     "roomId": chat_id,

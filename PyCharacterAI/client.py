@@ -55,13 +55,15 @@ class SyncClient(BaseClient):
 
         self.__requester = Requester(**kwargs)
 
+        self.__requester.session_init()
+
         self.account = methods.synchronous.AccountMethods(self, self.__requester)
         self.user = methods.synchronous.UserMethods(self, self.__requester)
         self.chat = methods.synchronous.ChatMethods(self, self.__requester)
         self.character = methods.synchronous.CharacterMethods(self, self.__requester)
         self.utils = methods.synchronous.UtilsMethods(self, self.__requester)
 
-    def authenticate(self, token: str, **kwargs):
+    def authenticate(self, token: str, **kwargs) -> None:
         self.set_token(token)
 
         web_next_auth: str = str(kwargs.get("web_next_auth", ""))
@@ -74,6 +76,10 @@ class SyncClient(BaseClient):
         except Exception:
             raise AuthenticationError('Maybe your token is invalid?')
 
+    def close_session(self) -> None:
+        self.__requester.session_close()
+        self.__requester.ws_close()
+
 
 class AsyncClient(BaseClient):
     def __init__(self, **kwargs):
@@ -81,11 +87,16 @@ class AsyncClient(BaseClient):
 
         self.__requester = Requester(**kwargs)
 
+        self.__requester.session_init_async()
+
         self.account = methods.asynchronous.AccountMethods(self, self.__requester)
         self.user = methods.asynchronous.UserMethods(self, self.__requester)
         self.chat = methods.asynchronous.ChatMethods(self, self.__requester)
         self.character = methods.asynchronous.CharacterMethods(self, self.__requester)
         self.utils = methods.asynchronous.UtilsMethods(self, self.__requester)
+
+    def get_requester(self) -> Requester:
+        return self.__requester
 
     async def authenticate(self, token: str, **kwargs):
         self.set_token(token)
@@ -99,3 +110,7 @@ class AsyncClient(BaseClient):
             self.set_account_id(str((await self.account.fetch_me()).account_id))
         except Exception:
             raise AuthenticationError('Maybe your token is invalid?')
+
+    async def close_session(self) -> None:
+        await self.__requester.session_close_async()
+        await self.__requester.ws_close_async()
