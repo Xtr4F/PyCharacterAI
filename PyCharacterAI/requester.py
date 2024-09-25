@@ -150,7 +150,7 @@ class Requester:
 
     async def ws_close_async(self):
         if self.__ws:
-            self.__ws.close()
+            await self.__ws.aclose()
             self.__ws = None
 
     def ws_clear(self, request_uuid: str = None) -> None:

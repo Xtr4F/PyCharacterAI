@@ -63,6 +63,9 @@ class SyncClient(BaseClient):
         self.character = methods.synchronous.CharacterMethods(self, self.__requester)
         self.utils = methods.synchronous.UtilsMethods(self, self.__requester)
 
+    def _get_requester(self) -> Requester:
+        return self.__requester
+
     def authenticate(self, token: str, **kwargs) -> None:
         self.set_token(token)
 
@@ -95,7 +98,7 @@ class AsyncClient(BaseClient):
         self.character = methods.asynchronous.CharacterMethods(self, self.__requester)
         self.utils = methods.asynchronous.UtilsMethods(self, self.__requester)
 
-    def get_requester(self) -> Requester:
+    def _get_requester(self) -> Requester:
         return self.__requester
 
     async def authenticate(self, token: str, **kwargs):
