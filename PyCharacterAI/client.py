@@ -2,7 +2,7 @@ from typing import Union
 
 from . import methods
 
-from .exceptions import AuthenticationError
+from .exceptions import AuthenticationError, PyCAIError
 from .requester import Requester
 
 
@@ -76,7 +76,7 @@ class SyncClient(BaseClient):
 
         try:
             self.set_account_id(str((self.account.fetch_me()).account_id))
-        except Exception:
+        except PyCAIError:
             raise AuthenticationError('Maybe your token is invalid?')
 
     def close_session(self) -> None:
@@ -111,7 +111,7 @@ class AsyncClient(BaseClient):
 
         try:
             self.set_account_id(str((await self.account.fetch_me()).account_id))
-        except Exception:
+        except PyCAIError:
             raise AuthenticationError('Maybe your token is invalid?')
 
     async def close_session(self) -> None:
