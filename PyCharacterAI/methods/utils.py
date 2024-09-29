@@ -9,10 +9,13 @@ from typing import List, Union
 
 from urllib.parse import urlparse, quote
 
-from ...types import Avatar, Voice
-from ...exceptions import (FetchError, EditError, UploadError, SearchError,
-                           ActionError, InvalidArgumentError, DeleteError)
-from ...requester import Requester
+from ..types import Avatar, Voice
+from ..exceptions import (
+    FetchError, EditError, UploadError, SearchError,
+    ActionError, InvalidArgumentError, DeleteError
+)
+
+from ..requester import Requester
 
 
 class UtilsMethods:

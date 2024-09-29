@@ -1,9 +1,10 @@
 import json
 from typing import Union, List
 
-from ...types import PublicUser, Voice
-from ...exceptions import FetchError, ActionError
-from ...requester import Requester
+from ..types import PublicUser, Voice
+from ..exceptions import FetchError, ActionError
+
+from ..requester import Requester
 
 
 class UserMethods:

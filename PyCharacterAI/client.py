@@ -2,7 +2,6 @@ from typing import Union
 
 from . import methods
 
-from .exceptions import AuthenticationError, PyCAIError
 from .requester import Requester
 
 
@@ -49,54 +48,19 @@ class BaseClient:
         return headers
 
 
-class SyncClient(BaseClient):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        self.__requester = Requester(**kwargs)
-
-        self.__requester.session_init()
-
-        self.account = methods.synchronous.AccountMethods(self, self.__requester)
-        self.user = methods.synchronous.UserMethods(self, self.__requester)
-        self.chat = methods.synchronous.ChatMethods(self, self.__requester)
-        self.character = methods.synchronous.CharacterMethods(self, self.__requester)
-        self.utils = methods.synchronous.UtilsMethods(self, self.__requester)
-
-    def _get_requester(self) -> Requester:
-        return self.__requester
-
-    def authenticate(self, token: str, **kwargs) -> None:
-        self.set_token(token)
-
-        web_next_auth: str = str(kwargs.get("web_next_auth", ""))
-
-        if web_next_auth:
-            self.set_web_next_auth(web_next_auth)
-
-        try:
-            self.set_account_id(str((self.account.fetch_me()).account_id))
-        except PyCAIError:
-            raise AuthenticationError('Maybe your token is invalid?')
-
-    def close_session(self) -> None:
-        self.__requester.session_close()
-        self.__requester.ws_close()
-
-
 class AsyncClient(BaseClient):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         self.__requester = Requester(**kwargs)
 
-        self.__requester.session_init_async()
+        self.__requester.requests_session_init()
 
-        self.account = methods.asynchronous.AccountMethods(self, self.__requester)
-        self.user = methods.asynchronous.UserMethods(self, self.__requester)
-        self.chat = methods.asynchronous.ChatMethods(self, self.__requester)
-        self.character = methods.asynchronous.CharacterMethods(self, self.__requester)
-        self.utils = methods.asynchronous.UtilsMethods(self, self.__requester)
+        self.account = methods.AccountMethods(self, self.__requester)
+        self.user = methods.UserMethods(self, self.__requester)
+        self.chat = methods.ChatMethods(self, self.__requester)
+        self.character = methods.CharacterMethods(self, self.__requester)
+        self.utils = methods.UtilsMethods(self, self.__requester)
 
     def _get_requester(self) -> Requester:
         return self.__requester
@@ -109,11 +73,17 @@ class AsyncClient(BaseClient):
         if web_next_auth:
             self.set_web_next_auth(web_next_auth)
 
-        try:
-            self.set_account_id(str((await self.account.fetch_me()).account_id))
-        except PyCAIError:
-            raise AuthenticationError('Maybe your token is invalid?')
+        self.set_account_id(str((await self.account.fetch_me()).account_id))
 
     async def close_session(self) -> None:
-        await self.__requester.session_close_async()
-        await self.__requester.ws_close_async()
+        await self.__requester.requests_session_close_async()
+        await self.__requester.ws_close_all()
+
+
+async def get_client(token: str, **kwargs) -> AsyncClient:
+    web_next_auth: str = str(kwargs.pop("web_next_auth", ""))
+
+    client = AsyncClient(**kwargs)
+    await client.authenticate(token=token, web_next_auth=web_next_auth)
+
+    return client

@@ -1,32 +1,37 @@
 import asyncio
-
 import json
-import time
 
-from typing import Dict, Union, Tuple, Generator, AsyncGenerator
+from typing import Dict, AsyncGenerator, Optional, cast
 
-import curl_cffi
-from curl_cffi import CurlWsFlag, CurlError, CurlECode
-from curl_cffi.requests import AsyncSession, Session, WebSocket
+import curl_cffi  # for requests
+from curl_cffi.requests import AsyncSession
 
-from .exceptions import PyCAIError
+import aiohttp  # for websockets
+from aiohttp import WSMsgType, WSServerHandshakeError
+
+from .exceptions import RequestError, AuthenticationError
 
 
 class Requester:
     def __init__(self, **kwargs):
         self.__extra_options = kwargs
 
-        self.__impersonate: Union[str, None] = self.__extra_options.pop("impersonate", None)
+        self.__impersonate: Optional[str] = self.__extra_options.pop("impersonate", None)
+
+        self.__proxy: Optional[str] = self.__extra_options.pop("proxy", None)
+
+        # whether to create a new websocket session for each new chat on one token
+        self.__force_new_ws_session: bool = self.__extra_options.pop("force_new_ws_session", False)
+
+        # debug information (TO-DO)
         self.__debug: bool = self.__extra_options.pop("requester_debug", False)
 
-        self.__session: Union[Session, AsyncSession, None] = None
+        self.__requests_session: Optional[curl_cffi.requests.AsyncSession] = None
+        self.__ws_sessions: Dict[str, Requester.WebsocketSession] = {}
 
-        self.__ws: Union[WebSocket, None] = None
-        self.__ws_response_messages: Dict = {}
-
-# ================================================================== #
-#                              Requests                              #
-# ================================================================== #
+    # ================================================================== #
+    #                              Requests                              #
+    # ================================================================== #
 
     class Response:
         def __init__(self, url: str, status_code: int, text: str, content: bytes):
@@ -38,48 +43,16 @@ class Requester:
         def json(self):
             return json.loads(self.text)
 
-    def session_init(self) -> None:
-        self.__session = None
-        self.__session = Session(impersonate=self.__impersonate or "chrome", **self.__extra_options)
+    def requests_session_init(self) -> None:
+        self.__requests_session = AsyncSession(
+            impersonate=self.__impersonate or "chrome",
+            proxy=self.__proxy,
+            **self.__extra_options
+        )
 
-    def session_init_async(self) -> None:
-        self.__session = None
-        self.__session = AsyncSession(impersonate=self.__impersonate or "chrome", **self.__extra_options)
-
-    def session_close(self) -> None:
-        if self.__session is not None:
-            self.__session.close()
-
-    async def session_close_async(self) -> None:
-        if self.__session is not None:
-            await self.__session.close()
-
-    def request(self, url: str, options=None) -> Response:
-        if options is None:
-            options = {}
-
-        method = options.get("method", "GET")
-        headers = options.get("headers", {})
-        body = options.get("body", {})
-
-        response: Union[curl_cffi.requests.Response, None] = None
-
-        if method == "GET":
-            response = self.__session.get(url, headers=headers)
-
-        elif method == "POST":
-            response = self.__session.post(url, headers=headers, data=body)
-
-        elif method == "PUT":
-            response = self.__session.put(url, headers=headers, data=body)
-
-        elif method == "PATCH":
-            response = self.__session.patch(url, headers=headers, data=body)
-
-        elif method == "DELETE":
-            response = self.__session.delete(url, headers=headers)
-
-        return self.Response(url, response.status_code, response.text, response.content)
+    async def requests_session_close_async(self) -> None:
+        if self.__requests_session is not None:
+            await self.__requests_session.close()
 
     async def request_async(self, url: str, options=None) -> Response:
         if options is None:
@@ -89,228 +62,282 @@ class Requester:
         headers = options.get("headers", {})
         body = options.get("body", {})
 
-        response: Union[curl_cffi.requests.Response, None] = None
-
-        if method == "GET":
-            response = await self.__session.get(url, headers=headers)
-
-        elif method == "POST":
-            response = await self.__session.post(url, headers=headers, data=body)
-
-        elif method == "PUT":
-            response = await self.__session.put(url, headers=headers, data=body)
-
-        elif method == "PATCH":
-            response = await self.__session.patch(url, headers=headers, data=body)
-
-        elif method == "DELETE":
-            response = await self.__session.delete(url, headers=headers)
-
-        return self.Response(url, response.status_code, response.text, response.content)
-
-# ================================================================== #
-#                             Websockets                             #
-#              (everything bellow is subject to change)              #
-# ================================================================== #
-
-    def ws_init(self, token: str) -> None:
-        self.__ws = None
+        raw_response: Optional[curl_cffi.requests.Response] = None
 
         try:
-            self.__ws = self.__session.ws_connect(
-                url='wss://neo.character.ai/ws/',
-                headers={'Cookie': f'HTTP_AUTHORIZATION="Token {token}"'}
-            )
+            if method == "GET":
+                raw_response = await self.__requests_session.get(url, headers=headers)
 
-            if not self.__ws:
-                raise PyCAIError("Cannot connect to websocket.")
+            elif method == "POST":
+                raw_response = await self.__requests_session.post(url, headers=headers, data=body)
 
-        except CurlError as e:
-            raise PyCAIError(f'{e}\n\nMaybe your token is invalid?')
+            elif method == "PUT":
+                raw_response = await self.__requests_session.put(url, headers=headers, data=body)
 
-    async def ws_init_async(self, token: str) -> None:
-        self.__ws = None
+            elif method == "PATCH":
+                raw_response = await self.__requests_session.patch(url, headers=headers, data=body)
 
-        try:
-            self.__ws = await self.__session.ws_connect(
-                url='wss://neo.character.ai/ws/',
-                headers={'Cookie': f'HTTP_AUTHORIZATION="Token {token}"'}
-            )
+            elif method == "DELETE":
+                raw_response = await self.__requests_session.delete(url, headers=headers)
 
-            if not self.__ws:
-                raise PyCAIError("Cannot connect to websocket.")
+        except curl_cffi.requests.errors.RequestsError:
+            raise RequestError
 
-        except CurlError as e:
-            raise PyCAIError(f'{e}\n\nMaybe your token is invalid?')
+        response = self.Response(url, raw_response.status_code, raw_response.text, raw_response.content)
 
-    def ws_close(self):
-        if self.__ws:
-            self.__ws.close()
-            self.__ws = None
+        if response.status_code == 401:
+            raise AuthenticationError("Maybe your token is invalid?")
 
-    async def ws_close_async(self):
-        if self.__ws:
-            await self.__ws.aclose()
-            self.__ws = None
+        return response
 
-    def ws_clear(self, request_uuid: str = None) -> None:
-        if request_uuid:
-            self.__ws_response_messages.pop(request_uuid, None)
-        else:
-            self.__ws_response_messages = {}
+    # ================================================================== #
+    #                             Websockets                             #
+    #              (everything bellow is subject to change)              #
+    # ================================================================== #
 
-    def ws_receive(self, receive_interval: float = 0.1) -> Tuple[bytes, int]:
-        chunks = []
-        flags = 0
+    class WebsocketSession:
+        def __init__(
+            self,
+            all_sessions: Dict,
+            token: str,
+            additional_uuid: Optional[str] = None,
+            proxy: Optional[str] = None,
+            deletion_timeout: float = 60.0,
+        ):
+            self.token: str = token
+            self.additional_uuid: Optional[str] = additional_uuid
 
-        while True:
+            self.session_uuid = f"{token}:{additional_uuid}"
+
+            self.proxy: Optional[str] = proxy
+
+            self.session: Optional[aiohttp.ClientSession] = None
+            self.ws: Optional[aiohttp.ClientWebSocketResponse] = None
+
+            self.all_sessions: Dict[str, Requester.WebsocketSession] = all_sessions
+
+            self.response_messages_queue: asyncio.Queue = asyncio.Queue()
+            self.response_messages: Dict[str, Dict] = {}
+
+            self.receiving = False
+            self.receiver_task: Optional[asyncio.Task] = None
+
+            self.in_use: bool = False
+            self.deletion_timeout: float = deletion_timeout  # 60 sec by default
+            self.deletion_task: Optional[asyncio.Task] = None
+
+            self.all_sessions[self.session_uuid] = self
+
+
+        @staticmethod
+        async def get_session(
+            all_sessions: Dict,
+            token: str,
+            additional_uuid: Optional[str] = None,
+            proxy: Optional[str] = None,
+            deletion_timeout: float = 60.0
+        ):
+            session_id = f"{token}:{additional_uuid}"
+            session = all_sessions.get(session_id, None)
+
+            if not session:
+                session = Requester.WebsocketSession(
+                    all_sessions=all_sessions,
+                    token=token,
+                    additional_uuid=additional_uuid,
+                    proxy=proxy,
+                    deletion_timeout=deletion_timeout
+                )
+
+                await session.init()
+            return session
+
+        async def init(self) -> None:
+            if self.session or self.ws:
+                await self.delete()
+
+            self.session = aiohttp.ClientSession()
             try:
-                chunk, frame = self.__ws.curl.ws_recv()
-                flags = frame.flags
+                self.ws = await self.session.ws_connect(
+                    url='wss://neo.character.ai/ws/',
+                    headers={
+                        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Cookie': f'HTTP_AUTHORIZATION="Token {self.token}"'
+                    },
+                    proxy=self.proxy,
+                    ssl=False
+                )
 
-                chunks.append(chunk)
+            except Exception as e:
+                if type(e) is WSServerHandshakeError:
+                    raise AuthenticationError("maybe your token is invalid?")
+                raise e
 
-                if frame.bytesleft == 0 and flags & CurlWsFlag.CONT == 0:
-                    break
+            self.schedule_deletion()
 
-            except CurlError as e:
-                if e.code == CurlECode.AGAIN:
-                    pass
-                else:
-                    raise e
+        @property
+        def inited(self) -> bool:
+            return self.session is not None and self.ws is not None
 
-            time.sleep(receive_interval)
-        return b"".join(chunks), flags
+        async def delete(self) -> None:
+            self.receiving = False
 
-    async def ws_receive_async(self, receive_interval: float = 0.1) -> Tuple[bytes, int]:
-        chunks = []
-        flags = 0
+            self.response_messages_queue = None
+            self.response_messages = {}
 
-        while True:
+            if self.receiver_task:
+                self.receiver_task.cancel()
+                self.receiver_task = None
+
+            if self.ws:
+                await self.ws.close()
+                self.ws = None
+
+            if self.session:
+                await self.session.close()
+                self.session = None
+
+            if self.deletion_task:
+                self.deletion_task.cancel()
+                self.deletion_task = None
+
+            self.all_sessions.pop(self.session_uuid, None)
+
+        def schedule_deletion(self) -> None:
+            self.cancel_deletion()
+
+            async def deletion_task() -> None:
+                self.in_use = False
+                await asyncio.sleep(self.deletion_timeout)
+
+                if not self.in_use:
+                    await self.delete()
+
+            self.deletion_task = asyncio.create_task(deletion_task())
+
+        def cancel_deletion(self) -> None:
+            self.in_use = True
+
+            if self.deletion_task:
+                self.deletion_task.cancel()
+                self.deletion_task = None
+
+        async def __receiver(self) -> None:
+            while self.receiving:
+                response = await self.ws.receive()
+
+                if response.type is WSMsgType.TEXT:
+                    response_str = cast(str, response.data)
+                    response_json = json.loads(response_str)
+
+                    self.response_messages_queue.put_nowait(response_json)
+
+                elif response.type is WSMsgType.CLOSE:
+                    await self.delete()
+                    raise RequestError("Connection was closed by server")
+
+                elif response.type is WSMsgType.CLOSING:
+                    raise RequestError("Connection is closing")
+
+                elif response.type is WSMsgType.CLOSED:
+                    raise RequestError("Connection is closed")
+
+        def __receiver_result_handler(self, task: asyncio.Task):
             try:
-                chunk, frame = self.__ws.curl.ws_recv()
-                flags = frame.flags
+                task.result()
 
-                chunks.append(chunk)
+            except asyncio.CancelledError:
+                pass
 
-                if frame.bytesleft == 0 and flags & CurlWsFlag.CONT == 0:
-                    break
+            finally:
+                self.receiver_task = None
+                self.receiving = False
 
-            except CurlError as e:
-                if e.code == CurlECode.AGAIN:
-                    pass
-                else:
-                    raise e
+        async def send(self, message: Dict) -> None:
+            self.schedule_deletion()
 
-            await asyncio.sleep(receive_interval)
-        return b"".join(chunks), flags
+            if not self.inited:
+                await self.init()
 
-    def __ws_send(self, payload: bytes, flags: CurlWsFlag = CurlWsFlag.TEXT) -> int:
-        return self.__ws.curl.ws_send(payload, flags)
+            if not self.receiver_task:
+                self.receiving = True
 
-    # ================================================================= #
-    #      I don't really know if the methods bellow should be so       #
-    #      complicated and if what I'm doing is right,                  #
-    #      so I'm open to your criticism and suggestions,               #
-    #      feel free to open a PR.                                      #
-    # ================================================================= #
+                self.receiver_task = asyncio.create_task(self.__receiver())
+                self.receiver_task.add_done_callback(self.__receiver_result_handler)
 
-    def ws_send(self, message: Dict, token: str) -> Generator:
-        if self.__ws is None:
-            self.ws_init(token)
-
-        request_uuid = message.get("request_id", None)
-
-        self.__ws_send(json.dumps(message).encode())
-
-        # receiving
-        while True:
-            if request_uuid is not None:
-                saved_messages = self.__ws_response_messages.get(request_uuid, [])
-
-                if len(saved_messages) > 0:
-                    message = saved_messages.pop(0)
-                    self.__ws_response_messages[request_uuid] = saved_messages
-
-                    yield message
-                    continue
-
-            # else
             try:
-                raw_response, flags = self.ws_receive()
+                await self.ws.send_json(message)
 
-            # something went wrong
-            except CurlError as e:
+            except ConnectionResetError:
+                raise RequestError
 
-                # reconnecting if connection was closed
-                if e.code == 55:
-                    self.ws_init(token)
+        async def receive(self, request_uuid: Optional[str] = None) -> AsyncGenerator:
+            self.schedule_deletion()
 
-                    # Okay, we're sending message again
-                    self.__ws_send(json.dumps(message).encode())
-                    continue
-
-                else:
-                    raise e
-
-            response = json.loads(raw_response.decode())
-            command = response.get("command", None)
-
-            if command in [None, "ok"] and request_uuid is None:
-                yield response
-                break
-
-            messages = self.__ws_response_messages.get(request_uuid, [])
-            messages.append(response)
-
-            self.__ws_response_messages[request_uuid] = messages
-
-    async def ws_send_async(self, message: Dict, token: str) -> AsyncGenerator:
-        if self.__ws is None:
-            await self.ws_init_async(token)
-
-        request_uuid = message.get("request_id", None)
-
-        self.__ws_send(json.dumps(message).encode())
-
-        # receiving
-        while True:
-            if request_uuid is not None:
-                saved_messages = self.__ws_response_messages.get(request_uuid, [])
-
-                if len(saved_messages) > 0:
-                    message = saved_messages.pop(0)
-                    self.__ws_response_messages[request_uuid] = saved_messages
-
-                    yield message
-                    continue
-
-            # else
             try:
-                raw_response, flags = await self.ws_receive_async()
+                while True:
+                    if request_uuid is not None:
+                        saved_messages = self.response_messages.get(request_uuid, [])
 
-            # something went wrong
-            except CurlError as e:
+                        if len(saved_messages) > 0:
+                            message = saved_messages.pop(0)
+                            self.response_messages[request_uuid] = saved_messages
 
-                # reconnecting if connection was closed
-                if e.code == 55:
-                    await self.ws_init_async(token)
+                            yield message
+                            self.schedule_deletion()
 
-                    # Okay, we're sending message again
-                    self.__ws_send(json.dumps(message).encode())
-                    continue
+                            continue
 
-                else:
-                    raise e
+                    try:
+                        current_response = await asyncio.wait_for(self.response_messages_queue.get(), 5)
 
-            response = json.loads(raw_response.decode())
-            command = response.get("command", None)
+                    except asyncio.TimeoutError:
+                        continue
 
-            if command in [None, "ok"] and request_uuid is None:
-                yield response
-                break
+                    except asyncio.CancelledError:
+                        yield None
+                        break
 
-            messages = self.__ws_response_messages.get(request_uuid, [])
-            messages.append(response)
+                    command = current_response.get("command", None)
 
-            self.__ws_response_messages[request_uuid] = messages
+                    if command in [None, "ok"] and request_uuid is None:
+                        yield current_response
+                        self.schedule_deletion()
+
+                        break
+
+                    messages = self.response_messages.get(request_uuid, [])
+                    messages.append(current_response)
+
+                    self.response_messages[request_uuid] = messages
+
+            finally:
+                if request_uuid:
+                    self.response_messages.pop(request_uuid, None)
+
+        async def send_and_receive(self, message: Dict) -> AsyncGenerator:
+            request_uuid = message.get("request_id", None)
+
+            await self.send(message)
+            return self.receive(request_uuid)
+
+    async def ws_send_and_receive(self, message: Dict, token: str,
+                                  additional_uuid: Optional[str] = "") -> AsyncGenerator:
+        session = await Requester.WebsocketSession.get_session(
+            self.__ws_sessions,
+            token=token,
+            proxy=self.__proxy,
+            additional_uuid=additional_uuid if self.__force_new_ws_session else ""
+        )
+
+        return await session.send_and_receive(message)
+
+    async def ws_close(self, session_uuid: str):
+        session = self.__ws_sessions.get(session_uuid, None)
+
+        if session:
+            await session.delete()
+
+    async def ws_close_all(self):
+        for session_uuid in list(self.__ws_sessions):
+            await self.ws_close(session_uuid)

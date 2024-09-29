@@ -12,7 +12,6 @@
 
 ---
 **TO-DO**:
-- [x] Synchronous version.
 - [x] Exceptions.
 - [ ] Logging?
 - [ ] Finish the docs.
@@ -54,6 +53,15 @@ await client.authenticate("TOKEN")
 > ```Python
 > await client.authenticate("TOKEN", web_next_auth="WEB_NEXT_AUTH")
 > ```
+
+\
+Or you can just call `get_client()` method:
+```Python
+from PyCharacterAI import get_client
+
+client = await get_client(token="TOKEN", web_next_auth="WEB_NEXT_AUTH")
+```
+
 After authentication, we can use all available library methods.
 
 ---
@@ -87,15 +95,16 @@ This library uses two types of tokens: a common `token` and `web_next_auth`. The
 ### Simple chatting example:
 ```Python
 import asyncio
-from PyCharacterAI import Client
+
+from PyCharacterAI import get_client
+from PyCharacterAI.exceptions import SessionClosedError
 
 token = "TOKEN"
 character_id = "ID"
 
 
 async def main():
-    client = Client()
-    await client.authenticate(token)
+    client = await get_client(token=token)
 
     me = await client.account.fetch_me()
     print(f"Authenticated as @{me.username}")
@@ -104,11 +113,20 @@ async def main():
 
     print(f"{greeting_message.author_name}: {greeting_message.get_primary_candidate().text}")
 
-    while True:
-        message = input(f"[{me.name}]: ")
+    try:
+        while True:
+            # NOTE: input() is blocking function!
+            message = input(f"[{me.name}]: ")
 
-        answer = await client.chat.send_message(character_id, chat.chat_id, message)
-        print(f"[{answer.author_name}]: {answer.get_primary_candidate().text}")
+            answer = await client.chat.send_message(character_id, chat.chat_id, message)
+            print(f"[{answer.author_name}]: {answer.get_primary_candidate().text}")
+
+    except SessionClosedError:
+        print("session closed. Bye!")
+
+    finally:
+        # Don't forget to explicitly close the session
+        await client.close_session()
 
 asyncio.run(main())
 ```
@@ -118,39 +136,48 @@ asyncio.run(main())
 A more advanced example. You can use so-called streaming to receive a message in parts, as is done on a website, instead of waiting for it to be completely generated:
 ```Python
 import asyncio
-from PyCharacterAI import Client
+
+from PyCharacterAI import get_client
+from PyCharacterAI.exceptions import SessionClosedError
 
 token = "TOKEN"
 character_id = "ID"
 
 
 async def main():
-    client = Client()
-    await client.authenticate(token)
+    client = await get_client(token=token)
 
     me = await client.account.fetch_me()
-    print(f"Authenticated as @{me.username}")
+    print(f'Authenticated as @{me.username}')
 
     chat, greeting_message = await client.chat.create_chat(character_id)
 
     print(f"[{greeting_message.author_name}]: {greeting_message.get_primary_candidate().text}")
 
-    while True:
-        message = input(f"[{me.name}]: ")
+    try:
+        while True:
+            # NOTE: input() is blocking function!
+            message = input(f"[{me.name}]: ")
 
-        answer = await client.chat.send_message(character_id, chat.chat_id, message, streaming=True)
+            answer = await client.chat.send_message(character_id, chat.chat_id, message, streaming=True)
 
-        printed_length = 0
-        async for message in answer:
-            if printed_length == 0:
-                print(f"[{message.author_name}]: ", end="")
+            printed_length = 0
+            async for message in answer:
+                if printed_length == 0:
+                    print(f"[{message.author_name}]: ", end="")
 
-            text = message.get_primary_candidate().text
-            print(text[printed_length:], end="")
+                text = message.get_primary_candidate().text
+                print(text[printed_length:], end="")
 
-            printed_length = len(text)
-        print("\n")
+                printed_length = len(text)
+            print("\n")
 
+    except SessionClosedError:
+        print("session closed. Bye!")
+
+    finally:
+        # Don't forget to explicitly close the session
+        await client.close_session()
 
 asyncio.run(main())
 ```

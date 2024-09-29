@@ -4,10 +4,13 @@ import json
 from typing import List, Dict, Union
 from urllib.parse import quote
 
-from ...types import Character, CharacterShort
-from ...exceptions import (FetchError, EditError, CreateError, SearchError,
-                           ActionError, InvalidArgumentError)
-from ...requester import Requester
+from ..types import Character, CharacterShort
+from ..exceptions import (
+    FetchError, EditError, CreateError, SearchError,
+    ActionError, InvalidArgumentError
+)
+
+from ..requester import Requester
 
 
 class CharacterMethods:

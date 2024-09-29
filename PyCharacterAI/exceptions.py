@@ -6,6 +6,14 @@ class UnknownError(PyCAIError):
     ...
 
 
+class RequestError(PyCAIError):
+    ...
+
+
+class SessionClosedError(RequestError):
+    ...
+
+
 class ServerError(PyCAIError):
     ...
 
