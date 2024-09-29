@@ -34,7 +34,13 @@ class Requester:
     # ================================================================== #
 
     class Response:
-        def __init__(self, url: str, status_code: int, text: str, content: bytes):
+        def __init__(
+            self,
+            url: str,
+            status_code: int,
+            text: str,
+            content: bytes
+        ):
             self.url: str = url
             self.status_code: int = status_code
             self.text: str = text
@@ -116,10 +122,10 @@ class Requester:
 
             self.all_sessions: Dict[str, Requester.WebsocketSession] = all_sessions
 
-            self.response_messages_queue: asyncio.Queue = asyncio.Queue()
+            self.response_messages_queue: Optional[asyncio.Queue] = asyncio.Queue()
             self.response_messages: Dict[str, Dict] = {}
 
-            self.receiving = False
+            self.receiving: bool = False
             self.receiver_task: Optional[asyncio.Task] = None
 
             self.in_use: bool = False
@@ -127,7 +133,6 @@ class Requester:
             self.deletion_task: Optional[asyncio.Task] = None
 
             self.all_sessions[self.session_uuid] = self
-
 
         @staticmethod
         async def get_session(
@@ -157,6 +162,7 @@ class Requester:
                 await self.delete()
 
             self.session = aiohttp.ClientSession()
+
             try:
                 self.ws = await self.session.ws_connect(
                     url='wss://neo.character.ai/ws/',
@@ -168,22 +174,17 @@ class Requester:
                     ssl=False
                 )
 
-            except Exception as e:
-                if type(e) is WSServerHandshakeError:
-                    raise AuthenticationError("maybe your token is invalid?")
-                raise e
+            except WSServerHandshakeError:
+                raise AuthenticationError("maybe your token is invalid?")
 
             self.schedule_deletion()
 
         @property
-        def inited(self) -> bool:
+        def initialized(self) -> bool:
             return self.session is not None and self.ws is not None
 
         async def delete(self) -> None:
             self.receiving = False
-
-            self.response_messages_queue = None
-            self.response_messages = {}
 
             if self.receiver_task:
                 self.receiver_task.cancel()
@@ -256,7 +257,7 @@ class Requester:
         async def send(self, message: Dict) -> None:
             self.schedule_deletion()
 
-            if not self.inited:
+            if not self.initialized:
                 await self.init()
 
             if not self.receiver_task:
@@ -295,7 +296,7 @@ class Requester:
                         continue
 
                     except asyncio.CancelledError:
-                        yield None
+                        yield None  # signaling that session is closed
                         break
 
                     command = current_response.get("command", None)
@@ -322,7 +323,7 @@ class Requester:
             return self.receive(request_uuid)
 
     async def ws_send_and_receive(self, message: Dict, token: str,
-                                  additional_uuid: Optional[str] = "") -> AsyncGenerator:
+                                  additional_uuid: str = "") -> AsyncGenerator:
         session = await Requester.WebsocketSession.get_session(
             self.__ws_sessions,
             token=token,
