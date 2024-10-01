@@ -17,7 +17,7 @@ setup(
     url='https://github.com/Xtr4F/PyCharacterAI',
     packages=find_packages(),
     install_requires=[
-        'curl-cffi',
+        'curl-cffi==0.7.1',
         'aiohttp'
     ],
     classifiers=[
