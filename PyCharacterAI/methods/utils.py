@@ -198,7 +198,7 @@ class UtilsMethods:
                 "method": 'POST',
                 "headers": {
                     "Content-Type": f"multipart/form-data; boundary={boundary}",
-                    "authorization": f"Token {kwargs.get("token") or self.__client.get_token()}"
+                    "authorization": f'Token {kwargs.get("token") or self.__client.get_token()}'
                 },
                 "body": body
             }
