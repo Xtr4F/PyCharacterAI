@@ -133,7 +133,7 @@ class UtilsMethods:
             raise UploadError("Cannot upload avatar. Maybe your web_next_auth token is invalid, "
                               "or your image is too large, or your image didn't pass the filter.")
 
-    async def upload_voice(self, voice: str, name: str, description: str = "", visibility: str = "private", **kwargs) -> Voice:
+    async def upload_voice(self, voice: Union[str, bytes], name: str, description: str = "", visibility: str = "private", **kwargs) -> Voice:
         if len(name) < 3 or len(name) > 20:
             raise InvalidArgumentError(f"Cannot upload voice. "
                                        f"Name must be at least 3 characters and no more than 20.")
@@ -148,7 +148,12 @@ class UtilsMethods:
             raise InvalidArgumentError("Cannot upload voice. "
                                        "Visibility must be \"public\" or \"private\"")
 
-        if os.path.isfile(voice):
+        mime = "audio/mpeg"
+
+        if isinstance(voice, bytes):
+            data = voice
+
+        elif os.path.isfile(voice):
             with open(voice, 'rb') as voice_file:
                 data = voice_file.read()
 
@@ -158,10 +163,10 @@ class UtilsMethods:
                 voice_request = await self.__requester.request_async(voice)
                 data = voice_request.content
 
+                mime, _ = mimetypes.guess_type(voice)
+
             else:
                 raise InvalidArgumentError('Cannot upload voice. Invalid audio.')
-
-        mime, _ = mimetypes.guess_type(voice)
 
         # sequence of 30 random numbers
         boundary_numbers = "".join(["{}".format(randint(0, 9)) for _ in range(0, 30)])

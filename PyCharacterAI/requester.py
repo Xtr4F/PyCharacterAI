@@ -38,11 +38,13 @@ class Requester:
             self,
             url: str,
             status_code: int,
+            headers: Optional[Dict],
             text: str,
             content: bytes
         ):
             self.url: str = url
             self.status_code: int = status_code
+            self.headers: Optional[Dict] = headers
             self.text: str = text
             self.content: bytes = content
 
@@ -89,7 +91,10 @@ class Requester:
         except curl_cffi.requests.errors.RequestsError:
             raise RequestError
 
-        response = self.Response(url, raw_response.status_code, raw_response.text, raw_response.content)
+        response = self.Response(
+            url=url, status_code=raw_response.status_code, headers=raw_response.headers,
+            text=raw_response.text, content=raw_response.content
+        )
 
         if response.status_code == 401:
             raise AuthenticationError("Maybe your token is invalid?")
@@ -167,7 +172,9 @@ class Requester:
                 self.ws = await self.session.ws_connect(
                     url='wss://neo.character.ai/ws/',
                     headers={
-                        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+                                      'AppleWebKit/537.36 (KHTML, like Gecko) '
+                                      'Chrome/120.0.0.0 Safari/537.36',
                         'Cookie': f'HTTP_AUTHORIZATION="Token {self.token}"'
                     },
                     proxy=self.proxy,
