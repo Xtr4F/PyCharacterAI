@@ -5,14 +5,19 @@ import base64
 
 import mimetypes
 from random import randint
-from typing import List, Union
+from typing import List, Optional, Union
 
 from urllib.parse import urlparse, quote
 
 from ..types import Avatar, Voice
 from ..exceptions import (
-    FetchError, EditError, UploadError, SearchError,
-    ActionError, InvalidArgumentError, DeleteError
+    FetchError,
+    EditError,
+    UploadError,
+    SearchError,
+    ActionError,
+    InvalidArgumentError,
+    DeleteError,
 )
 
 from ..requester import Requester
@@ -26,7 +31,7 @@ class UtilsMethods:
     async def ping(self, **kwargs) -> bool:
         request = await self.__requester.request_async(
             url="https://neo.character.ai/ping/",
-            options={"headers": self.__client.get_headers(kwargs.get("token", None))}
+            options={"headers": self.__client.get_headers(kwargs.get("token", None))},
         )
 
         if request.status_code == 200:
@@ -36,46 +41,47 @@ class UtilsMethods:
     async def fetch_voice(self, voice_id, **kwargs) -> Voice:
         request = await self.__requester.request_async(
             url=f"https://neo.character.ai/multimodal/api/v1/voices/{voice_id}",
-            options={"headers": self.__client.get_headers(kwargs.get("token", None))}
+            options={"headers": self.__client.get_headers(kwargs.get("token", None))},
         )
 
         if request.status_code == 200:
             return Voice(request.json().get("voice"))
 
-        raise FetchError('Cannot fetch voice. Maybe voice does not exist?')
+        raise FetchError("Cannot fetch voice. Maybe voice does not exist?")
 
     async def search_voices(self, voice_name: str, **kwargs) -> List[Voice]:
         request = await self.__requester.request_async(
             url=f"https://neo.character.ai/multimodal/api/v1/voices/search?query={quote(voice_name)}",
-            options={"headers": self.__client.get_headers(kwargs.get("token", None))}
+            options={"headers": self.__client.get_headers(kwargs.get("token", None))},
         )
 
         if request.status_code == 200:
             raw_voices = request.json().get("voices", [])
             return [Voice(raw_voice) for raw_voice in raw_voices]
 
-        raise SearchError('Cannot search for voices.')
+        raise SearchError("Cannot search for voices.")
 
     async def generate_image(self, prompt: str, **kwargs) -> List[str]:
         num_candidates: int = kwargs.get("num_candidates", 4)
 
         request = await self.__requester.request_async(
-            url='https://plus.character.ai/chat/character/generate-avatar-options',
+            url="https://plus.character.ai/chat/character/generate-avatar-options",
             options={
-                "method": 'POST',
+                "method": "POST",
                 "headers": self.__client.get_headers(kwargs.get("token", None)),
                 "body": json.dumps(
                     {
                         "prompt": prompt,
                         "num_candidates": num_candidates,
-                        "model_version": "v1"
+                        "model_version": "v1",
                     }
-                )
-            })
+                ),
+            },
+        )
 
         if request.status_code == 200:
             response = request.json()
-            result = response.get('result', [])
+            result = response.get("result", [])
 
             urls = []
 
@@ -85,11 +91,13 @@ class UtilsMethods:
                     urls.append(url)
 
             return urls
-        raise ActionError('Cannot generate image.')
+        raise ActionError("Cannot generate image.")
 
-    async def upload_avatar(self, image: str, check_image: bool = True, **kwargs) -> Avatar:
+    async def upload_avatar(
+        self, image: str, check_image: bool = True, **kwargs
+    ) -> Avatar:
         if os.path.isfile(image):
-            with open(image, 'rb') as image_file:
+            with open(image, "rb") as image_file:
                 data = base64.b64encode(image_file.read())
 
         else:
@@ -99,7 +107,7 @@ class UtilsMethods:
                 data = base64.b64encode(image_request.content)
 
             else:
-                raise InvalidArgumentError('Cannot upload avatar. Invalid image.')
+                raise InvalidArgumentError("Cannot upload avatar. Invalid image.")
 
         mime, _ = mimetypes.guess_type(image)
         image_url = f"data:{mime};base64,{data.decode('utf-8')}"
@@ -107,12 +115,14 @@ class UtilsMethods:
         request = await self.__requester.request_async(
             url="https://character.ai/api/trpc/user.uploadAvatar?batch=1",
             options={
-                "method": 'POST',
-                "headers": self.__client.get_headers(token=kwargs.get("token", None),
-                                                     web_next_auth=kwargs.get("web_next_auth", None),
-                                                     include_web_next_auth=True),
-                "body": json.dumps({"0": {"json": {"imageDataUrl": image_url}}})
-            }
+                "method": "POST",
+                "headers": self.__client.get_headers(
+                    token=kwargs.get("token", None),
+                    web_next_auth=kwargs.get("web_next_auth", None),
+                    include_web_next_auth=True,
+                ),
+                "body": json.dumps({"0": {"json": {"imageDataUrl": image_url}}}),
+            },
         )
 
         if request.status_code == 200:
@@ -123,30 +133,45 @@ class UtilsMethods:
                 avatar = Avatar({"file_name": file_name})
 
                 if check_image:
-                    image_request = await self.__requester.request_async(avatar.get_url())
+                    image_request = await self.__requester.request_async(
+                        avatar.get_url()
+                    )
 
                     if image_request.status_code != 200:
                         raise UploadError(f"Cannot upload avatar. {image_request.text}")
 
                 return avatar
 
-            raise UploadError("Cannot upload avatar. Maybe your web_next_auth token is invalid, "
-                              "or your image is too large, or your image didn't pass the filter.")
+        raise UploadError(
+            "Cannot upload avatar. Maybe your web_next_auth token is invalid, "
+            "or your image is too large, or your image didn't pass the filter."
+        )
 
-    async def upload_voice(self, voice: Union[str, bytes], name: str, description: str = "", visibility: str = "private", **kwargs) -> Voice:
+    async def upload_voice(
+        self,
+        voice: Union[str, bytes],
+        name: str,
+        description: str = "",
+        visibility: str = "private",
+        **kwargs,
+    ) -> Voice:
         if len(name) < 3 or len(name) > 20:
-            raise InvalidArgumentError(f"Cannot upload voice. "
-                                       f"Name must be at least 3 characters and no more than 20.")
+            raise InvalidArgumentError(
+                f"Cannot upload voice. "
+                f"Name must be at least 3 characters and no more than 20."
+            )
 
         if len(description) > 120:
-            raise InvalidArgumentError(f"Cannot upload voice. "
-                                       f"Description must be no more than 120 characters.")
+            raise InvalidArgumentError(
+                f"Cannot upload voice. Description must be no more than 120 characters."
+            )
 
         visibility = visibility.lower()
 
         if visibility not in ["private", "public"]:
-            raise InvalidArgumentError("Cannot upload voice. "
-                                       "Visibility must be \"public\" or \"private\"")
+            raise InvalidArgumentError(
+                'Cannot upload voice. Visibility must be "public" or "private"'
+            )
 
         mime = "audio/mpeg"
 
@@ -154,7 +179,7 @@ class UtilsMethods:
             data = voice
 
         elif os.path.isfile(voice):
-            with open(voice, 'rb') as voice_file:
+            with open(voice, "rb") as voice_file:
                 data = voice_file.read()
 
         else:
@@ -166,7 +191,7 @@ class UtilsMethods:
                 mime, _ = mimetypes.guess_type(voice)
 
             else:
-                raise InvalidArgumentError('Cannot upload voice. Invalid audio.')
+                raise InvalidArgumentError("Cannot upload voice. Invalid audio.")
 
         # sequence of 30 random numbers
         boundary_numbers = "".join(["{}".format(randint(0, 9)) for _ in range(0, 30)])
@@ -175,13 +200,13 @@ class UtilsMethods:
 
         # First part
         body = (
-            f'--{boundary}\r\n'
+            f"--{boundary}\r\n"
             f'Content-Disposition: form-data; name="file"; filename="input.mp3"\r\n'
-            f'Content-Type: {mime}\r\n\r\n'
+            f"Content-Type: {mime}\r\n\r\n"
         ).encode("UTF-8")
 
         body += data
-        body += f'\r\n--{boundary}\r\n'.encode("UTF-8")
+        body += f"\r\n--{boundary}\r\n".encode("UTF-8")
 
         # Second part
         body += (
@@ -193,27 +218,29 @@ class UtilsMethods:
             '"visibility":"private",'
             '"previewText":"Good day! Here to make life a little less complicated.",'
             '"audioSourceType":"file"}}'
-            f'\r\n--{boundary}--\r\n'
+            f"\r\n--{boundary}--\r\n"
         ).encode("UTF-8")
 
         # Uploading
         request = await self.__requester.request_async(
             url="https://neo.character.ai/multimodal/api/v1/voices/",
             options={
-                "method": 'POST',
+                "method": "POST",
                 "headers": {
                     "Content-Type": f"multipart/form-data; boundary={boundary}",
-                    "authorization": f'Token {kwargs.get("token") or self.__client.get_token()}'
+                    "authorization": f"Token {kwargs.get('token') or self.__client.get_token()}",
                 },
-                "body": body
-            }
+                "body": body,
+            },
         )
 
         # Confirming
         if request.status_code in [200, 201]:
             try:
                 new_voice = Voice(request.json().get("voice"))
-                final_voice = await self.edit_voice(new_voice, name, description, visibility, **kwargs)
+                final_voice = await self.edit_voice(
+                    new_voice, name, description, visibility, **kwargs
+                )
 
                 return final_voice
 
@@ -222,59 +249,79 @@ class UtilsMethods:
 
         raise UploadError("Cannot upload voice. May be your audio is invalid?")
 
-    async def edit_voice(self, voice: Union[str, Voice], name: str = None, description: str = None,
-                         visibility: str = None, **kwargs) -> Voice:
+    async def edit_voice(
+        self,
+        voice: Union[str, Voice],
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        visibility: str = "private",
+        **kwargs,
+    ) -> Voice:
         if not isinstance(voice, Voice):
             voice = await self.fetch_voice(voice, **kwargs)
 
-        if not name:
-            name = voice.name
+        else:
+            if not name:
+                name = voice.name
 
-        if not description:
-            description = voice.description
+            if not description:
+                description = voice.description
 
-        if not visibility:
-            visibility = voice.visibility
+            if not visibility:
+                visibility = voice.visibility
+
+        if not name or not description:
+            raise InvalidArgumentError(
+                f"Cannot edit voice. Name and description must be specified."
+            )
 
         if len(name) < 3 or len(name) > 20:
-            raise InvalidArgumentError(f"Cannot edit voice. "
-                                       f"Name must be at least 3 characters and no more than 20.")
+            raise InvalidArgumentError(
+                f"Cannot edit voice. "
+                f"Name must be at least 3 characters and no more than 20."
+            )
 
         if len(description) > 120:
-            raise InvalidArgumentError(f"Cannot edit voice. "
-                                       f"Description must be no more than 120 characters.")
+            raise InvalidArgumentError(
+                f"Cannot edit voice. Description must be no more than 120 characters."
+            )
 
         visibility = visibility.lower()
 
         if visibility not in ["private", "public"]:
-            raise InvalidArgumentError("Cannot edit voice. "
-                                       "Visibility must be \"public\" or \"private\"")
+            raise InvalidArgumentError(
+                'Cannot edit voice. Visibility must be "public" or "private"'
+            )
 
         request = await self.__requester.request_async(
             url=f"https://neo.character.ai/multimodal/api/v1/voices/{voice.voice_id}",
             options={
-                "method": 'PUT',
+                "method": "PUT",
                 "headers": self.__client.get_headers(kwargs.get("token", None)),
                 "body": json.dumps(
-                    {"voice": {
-                          "audioSourceType": "file",
-                          "backendId": voice.voice_id,
-                          "backendProvider": "cai",
-                          "creatorInfo": {"id": voice.creator_id,
-                                          "source": "user",
-                                          "username": ""},
-                          "description": voice.description,
-                          "gender": voice.gender,
-                          "id": voice.voice_id,
-                          "internalStatus": "draft",
-                          "lastUpdateTime": "0001-01-01T00:00:00Z",
-                          "name": name,
-                          "previewAudioURI": voice.preview_audio_url,
-                          "previewText": voice.preview_text,
-                          "visibility": visibility,
-                          }
-                     })
-            }
+                    {
+                        "voice": {
+                            "audioSourceType": "file",
+                            "backendId": voice.voice_id,
+                            "backendProvider": "cai",
+                            "creatorInfo": {
+                                "id": voice.creator_id,
+                                "source": "user",
+                                "username": "",
+                            },
+                            "description": voice.description,
+                            "gender": voice.gender,
+                            "id": voice.voice_id,
+                            "internalStatus": "draft",
+                            "lastUpdateTime": "0001-01-01T00:00:00Z",
+                            "name": name,
+                            "previewAudioURI": voice.preview_audio_url,
+                            "previewText": voice.preview_text,
+                            "visibility": visibility,
+                        }
+                    }
+                ),
+            },
         )
 
         if request.status_code == 200:
@@ -287,8 +334,8 @@ class UtilsMethods:
             url=f"https://neo.character.ai/multimodal/api/v1/voices/{voice_id}",
             options={
                 "method": "DELETE",
-                "headers": self.__client.get_headers(kwargs.get("token", None))
-            }
+                "headers": self.__client.get_headers(kwargs.get("token", None)),
+            },
         )
 
         if request.status_code == 200:
@@ -296,22 +343,25 @@ class UtilsMethods:
 
         raise DeleteError("Cannot delete voice.")
 
-    async def generate_speech(self, chat_id: str, turn_id: str, candidate_id: str, voice_id: str,
-                              **kwargs) -> Union[bytes, str]:
+    async def generate_speech(
+        self, chat_id: str, turn_id: str, candidate_id: str, voice_id: str, **kwargs
+    ) -> Union[bytes, str]:
         return_url = kwargs.get("return_url", False)
 
         request = await self.__requester.request_async(
             url="https://neo.character.ai/multimodal/api/v1/memo/replay",
             options={
-                "method": 'POST',
+                "method": "POST",
                 "headers": self.__client.get_headers(kwargs.get("token", None)),
-                "body": json.dumps({
-                    "candidateId": candidate_id,
-                    "roomId": chat_id,
-                    "turnId": turn_id,
-                    "voiceId": voice_id
-                })
-            }
+                "body": json.dumps(
+                    {
+                        "candidateId": candidate_id,
+                        "roomId": chat_id,
+                        "turnId": turn_id,
+                        "voiceId": voice_id,
+                    }
+                ),
+            },
         )
 
         response = request.json()
@@ -325,10 +375,7 @@ class UtilsMethods:
         if return_url:
             return audio_url
 
-        request = await self.__requester.request_async(
-            url=audio_url,
-            options={}
-        )
+        request = await self.__requester.request_async(url=audio_url, options={})
 
         speech = request.content
 

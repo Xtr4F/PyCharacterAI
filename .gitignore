@@ -1,0 +1,8 @@
+pyrightconfig.json
+
+tests 
+scripts
+
+**__pycache__
+**venv/
+*.py[cod]

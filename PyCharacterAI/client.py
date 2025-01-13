@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional, Union
 
 from . import methods
 
@@ -6,7 +6,7 @@ from .requester import Requester
 
 
 class BaseClient:
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.__token: Union[str, None] = None
         self.__web_next_auth: Union[str, None] = None
         self.__account_id: Union[str, None] = None
@@ -36,25 +36,28 @@ class BaseClient:
     def get_account_id(self):
         return self.__account_id
 
-    def get_headers(self, token=None, web_next_auth=None, include_web_next_auth=False):
+    def get_headers(
+        self,
+        token: Optional[str] = None,
+        web_next_auth: Optional[str] = None,
+        include_web_next_auth: bool = False,
+    ):
         headers = {
-            'authorization': f'Token {token or self.get_token()}',
-            'Content-Type': 'application/json'
+            "authorization": f"Token {token or self.get_token()}",
+            "Content-Type": "application/json",
         }
 
         if include_web_next_auth:
-            headers['cookie'] = web_next_auth or self.get_web_next_auth()
+            headers["cookie"] = web_next_auth or self.get_web_next_auth() or ""
 
         return headers
 
 
 class AsyncClient(BaseClient):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__()
 
         self.__requester = Requester(**kwargs)
-
-        self.__requester.requests_session_init()
 
         self.account = methods.AccountMethods(self, self.__requester)
         self.user = methods.UserMethods(self, self.__requester)
@@ -76,8 +79,7 @@ class AsyncClient(BaseClient):
         self.set_account_id(str((await self.account.fetch_me()).account_id))
 
     async def close_session(self) -> None:
-        await self.__requester.requests_session_close_async()
-        await self.__requester.ws_close_all()
+        await self.__requester.ws_close_async()
 
 
 async def get_client(token: str, **kwargs) -> AsyncClient:
