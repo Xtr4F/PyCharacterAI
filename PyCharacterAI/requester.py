@@ -1,7 +1,7 @@
 import asyncio
 import json
 
-from typing import Dict, AsyncGenerator, List, Optional, cast
+from typing import Dict, AsyncGenerator, List, Optional, Tuple, cast
 
 # for requests
 from curl_cffi import requests as curl_cffi_requests
@@ -24,7 +24,7 @@ class Requester:
         self.__proxy: Optional[str] = self.__extra_options.pop("proxy", None)
 
         # debug information (TO-DO)
-        self.__debug: bool = self.__extra_options.pop("requester_debug", False)
+        # self.__debug: bool = self.__extra_options.pop("requester_debug", False)
 
         self.__ws_session: Optional[aiohttp.ClientSession] = None
         self.__ws: Optional[aiohttp.ClientWebSocketResponse] = None
@@ -39,13 +39,13 @@ class Requester:
             self,
             url: str,
             status_code: int,
-            headers: Optional[Dict],
+            headers: List[Tuple[str, str]],
             text: str,
             content: bytes,
         ):
             self.url: str = url
             self.status_code: int = status_code
-            self.headers: Optional[Dict] = headers
+            self.headers: List[Tuple[str, str]] = headers
             self.text: str = text
             self.content: bytes = content
 
@@ -92,7 +92,7 @@ class Requester:
         response = self.Response(
             url=url,
             status_code=raw_response.status_code,
-            headers=raw_response.headers,
+            headers=raw_response.headers.multi_items(),
             text=raw_response.text,
             content=raw_response.content,
         )

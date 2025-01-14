@@ -157,13 +157,13 @@ class UtilsMethods:
     ) -> Voice:
         if len(name) < 3 or len(name) > 20:
             raise InvalidArgumentError(
-                f"Cannot upload voice. "
-                f"Name must be at least 3 characters and no more than 20."
+                "Cannot upload voice. "
+                "Name must be at least 3 characters and no more than 20."
             )
 
         if len(description) > 120:
             raise InvalidArgumentError(
-                f"Cannot upload voice. Description must be no more than 120 characters."
+                "Cannot upload voice. Description must be no more than 120 characters."
             )
 
         visibility = visibility.lower()
@@ -272,18 +272,18 @@ class UtilsMethods:
 
         if not name or not description:
             raise InvalidArgumentError(
-                f"Cannot edit voice. Name and description must be specified."
+                "Cannot edit voice. Name and description must be specified."
             )
 
         if len(name) < 3 or len(name) > 20:
             raise InvalidArgumentError(
-                f"Cannot edit voice. "
-                f"Name must be at least 3 characters and no more than 20."
+                "Cannot edit voice. "
+                "Name must be at least 3 characters and no more than 20."
             )
 
         if len(description) > 120:
             raise InvalidArgumentError(
-                f"Cannot edit voice. Description must be no more than 120 characters."
+                "Cannot edit voice. Description must be no more than 120 characters."
             )
 
         visibility = visibility.lower()
