@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Any, Dict, Optional
 
 from . import methods
 
@@ -7,9 +7,9 @@ from .requester import Requester
 
 class BaseClient:
     def __init__(self):
-        self.__token: Union[str, None] = None
-        self.__web_next_auth: Union[str, None] = None
-        self.__account_id: Union[str, None] = None
+        self.__token: Optional[str] = None
+        self.__web_next_auth: Optional[str] = None
+        self.__account_id: Optional[str] = None
 
     # ========================================================== #
     # Use these only if you 100% know what are you doing.        #
@@ -27,13 +27,13 @@ class BaseClient:
 
     # ========================================================== #
 
-    def get_token(self):
+    def get_token(self) -> Optional[str]:
         return self.__token
 
-    def get_web_next_auth(self):
+    def get_web_next_auth(self) -> Optional[str]:
         return self.__web_next_auth
 
-    def get_account_id(self):
+    def get_account_id(self) -> Optional[str]:
         return self.__account_id
 
     def get_headers(
@@ -41,7 +41,7 @@ class BaseClient:
         token: Optional[str] = None,
         web_next_auth: Optional[str] = None,
         include_web_next_auth: bool = False,
-    ):
+    ) -> Dict:
         headers = {
             "authorization": f"Token {token or self.get_token()}",
             "Content-Type": "application/json",
@@ -68,11 +68,10 @@ class AsyncClient(BaseClient):
     def _get_requester(self) -> Requester:
         return self.__requester
 
-    async def authenticate(self, token: str, **kwargs):
+    async def authenticate(self, token: str, **kwargs: Any):
         self.set_token(token)
 
         web_next_auth: str = str(kwargs.get("web_next_auth", ""))
-
         if web_next_auth:
             self.set_web_next_auth(web_next_auth)
 
@@ -82,7 +81,7 @@ class AsyncClient(BaseClient):
         await self.__requester.ws_close_async()
 
 
-async def get_client(token: str, **kwargs) -> AsyncClient:
+async def get_client(token: str, **kwargs: Any) -> AsyncClient:
     web_next_auth: str = str(kwargs.pop("web_next_auth", ""))
 
     client = AsyncClient(**kwargs)

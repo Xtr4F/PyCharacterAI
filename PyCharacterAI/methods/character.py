@@ -1,7 +1,7 @@
 import uuid
 import json
 
-from typing import List, Dict, Union
+from typing import Any, List, Dict, Optional
 from urllib.parse import quote
 
 from ..types import Character, CharacterShort
@@ -22,9 +22,7 @@ class CharacterMethods:
         self.__client = client
         self.__requester = requester
 
-    async def fetch_characters_by_category(
-        self, **kwargs
-    ) -> Dict[str, List[CharacterShort]]:
+    async def fetch_characters_by_category(self, **kwargs: Any) -> Dict[str, List[CharacterShort]]:
         request = await self.__requester.request_async(
             url="https://plus.character.ai/chat/curated_categories/characters/",
             options={"headers": self.__client.get_headers(kwargs.get("token", None))},
@@ -40,12 +38,14 @@ class CharacterMethods:
 
                 for character_raw in characters_raw:
                     characters.append(CharacterShort(character_raw))
+
                 characters_by_category[category] = characters
+
             return characters_by_category
 
         raise FetchError("Cannot fetch characters by category.")
 
-    async def fetch_recommended_characters(self, **kwargs) -> List[CharacterShort]:
+    async def fetch_recommended_characters(self, **kwargs: Any) -> List[CharacterShort]:
         request = await self.__requester.request_async(
             url="https://neo.character.ai/recommendation/v1/user",
             options={"headers": self.__client.get_headers(kwargs.get("token", None))},
@@ -57,11 +57,12 @@ class CharacterMethods:
 
             for character_raw in characters_raw:
                 characters.append(CharacterShort(character_raw))
+
             return characters
 
         raise FetchError("Cannot fetch recommended characters.")
 
-    async def fetch_featured_characters(self, **kwargs) -> List[CharacterShort]:
+    async def fetch_featured_characters(self, **kwargs: Any) -> List[CharacterShort]:
         request = await self.__requester.request_async(
             url="https://plus.character.ai/chat/characters/featured_v2/",
             options={"headers": self.__client.get_headers(kwargs.get("token", None))},
@@ -73,13 +74,12 @@ class CharacterMethods:
 
             for character_raw in characters_raw:
                 characters.append(CharacterShort(character_raw))
+
             return characters
 
         raise FetchError("Cannot fetch featured characters.")
 
-    async def fetch_similar_characters(
-        self, character_id: str, **kwargs
-    ) -> List[CharacterShort]:
+    async def fetch_similar_characters(self, character_id: str, **kwargs: Any) -> List[CharacterShort]:
         request = await self.__requester.request_async(
             url=f"https://neo.character.ai/recommendation/v1/character/{character_id}",
             options={"headers": self.__client.get_headers(kwargs.get("token", None))},
@@ -91,11 +91,12 @@ class CharacterMethods:
 
             for character_raw in characters_raw:
                 characters.append(CharacterShort(character_raw))
+
             return characters
 
         raise FetchError("Cannot fetch similar characters.")
 
-    async def fetch_character_info(self, character_id: str, **kwargs) -> Character:
+    async def fetch_character_info(self, character_id: str, **kwargs: Any) -> Character:
         request = await self.__requester.request_async(
             url="https://plus.character.ai/chat/character/info/",
             options={
@@ -107,17 +108,15 @@ class CharacterMethods:
 
         if request.status_code == 200:
             response = request.json()
-
             if response.get("status", "") == "NOT_OK":
                 error = response.get("error", "")
                 raise FetchError(f"Cannot fetch character information. {error}")
 
             return Character(response["character"])
+
         raise FetchError("Cannot fetch character information.")
 
-    async def search_characters(
-        self, character_name: str, **kwargs
-    ) -> List[CharacterShort]:
+    async def search_characters(self, character_name: str, **kwargs: Any) -> List[CharacterShort]:
         request = await self.__requester.request_async(
             url=f"https://plus.character.ai/chat/characters/search/?query={quote(character_name)}",
             options={"headers": self.__client.get_headers(kwargs.get("token", None))},
@@ -129,7 +128,7 @@ class CharacterMethods:
 
         raise SearchError("Cannot search for characters.")
 
-    async def search_creators(self, creator_name: str, **kwargs) -> List[str]:
+    async def search_creators(self, creator_name: str, **kwargs: Any) -> List[str]:
         request = await self.__requester.request_async(
             url=f"https://plus.character.ai/chat/creators/search/?query={quote(creator_name)}",
             options={"headers": self.__client.get_headers(kwargs.get("token", None))},
@@ -141,9 +140,7 @@ class CharacterMethods:
 
         raise SearchError("Cannot search for creators.")
 
-    async def character_vote(
-        self, character_id: str, vote: Union[bool, None], **kwargs
-    ) -> bool:
+    async def character_vote(self, character_id: str, vote: Optional[bool], **kwargs: Any) -> bool:
         request = await self.__requester.request_async(
             url="https://plus.character.ai/chat/character/vote/",
             options={
@@ -154,9 +151,7 @@ class CharacterMethods:
         )
 
         if request.status_code == 200:
-            if (request.json()).get("status", None) == "OK":
-                return True
-            return False
+            return (request.json()).get("status", None) == "OK"
 
         raise ActionError("Cannot vote for character.")
 
@@ -171,45 +166,32 @@ class CharacterMethods:
         visibility: str = "private",
         avatar_rel_path: str = "",
         default_voice_id: str = "",
-        **kwargs,
+        **kwargs: Any,
     ) -> Character:
         if len(name) < 3 or len(name) > 20:
             raise InvalidArgumentError(
-                "Cannot create character. "
-                "Name must be at least 3 characters and no more than 20."
+                "Cannot create character. Name must be at least 3 characters and no more than 20."
             )
 
         if len(greeting) < 3 or len(greeting) > 2048:
             raise InvalidArgumentError(
-                "Cannot create character. "
-                "Greeting must be at least 3 characters and no more than 2048."
+                "Cannot create character. Greeting must be at least 3 characters and no more than 2048."
             )
 
         visibility = visibility.upper()
-
         if visibility not in ["UNLISTED", "PUBLIC", "PRIVATE"]:
-            raise InvalidArgumentError(
-                "Cannot create character. "
-                'Visibility must be "unlisted", "public" or "private"'
-            )
+            raise InvalidArgumentError('Cannot create character. Visibility must be "unlisted", "public" or "private"')
 
         if title and (len(title) < 3 or len(title) > 50):
             raise InvalidArgumentError(
-                "Cannot create character. "
-                "Title must be at least 3 characters and no more than 50."
+                "Cannot create character. Title must be at least 3 characters and no more than 50."
             )
 
         if description and len(description) > 500:
-            raise InvalidArgumentError(
-                "Cannot create character. "
-                "Description must be no more than 500 characters."
-            )
+            raise InvalidArgumentError("Cannot create character. Description must be no more than 500 characters.")
 
         if definition and len(definition) > 32000:
-            raise InvalidArgumentError(
-                "Cannot create character. "
-                "Definition must be no more than 32000 characters."
-            )
+            raise InvalidArgumentError("Cannot create character. Definition must be no more than 32000 characters.")
 
         request = await self.__requester.request_async(
             url="https://plus.character.ai/chat/character/create/",
@@ -240,13 +222,11 @@ class CharacterMethods:
 
         if request.status_code == 200:
             response = request.json()
-            if (
-                response.get("status", None) == "OK"
-                and response.get("character", None) is not None
-            ):
+            if response.get("status", None) == "OK" and response.get("character", None) is not None:
                 return Character(response.get("character"))
 
             raise CreateError(f"Cannot create character. {response.get('error', '')}")
+
         raise CreateError("Cannot create character.")
 
     async def edit_character(
@@ -261,45 +241,30 @@ class CharacterMethods:
         visibility: str = "private",
         avatar_rel_path: str = "",
         default_voice_id: str = "",
-        **kwargs,
+        **kwargs: Any,
     ) -> Character:
         if len(name) < 3 or len(name) > 20:
-            raise InvalidArgumentError(
-                "Cannot edit character. "
-                "Name must be at least 3 characters and no more than 20."
-            )
+            raise InvalidArgumentError("Cannot edit character. Name must be at least 3 characters and no more than 20.")
 
         if len(greeting) < 3 or len(greeting) > 2048:
             raise InvalidArgumentError(
-                "Cannot edit character. "
-                "Greeting must be at least 3 characters and no more than 2048."
+                "Cannot edit character. Greeting must be at least 3 characters and no more than 2048."
             )
 
         visibility = visibility.upper()
-
         if visibility not in ["UNLISTED", "PUBLIC", "PRIVATE"]:
-            raise InvalidArgumentError(
-                "Cannot edit character. "
-                'Visibility must be "unlisted", "public" or "private"'
-            )
+            raise InvalidArgumentError('Cannot edit character. Visibility must be "unlisted", "public" or "private"')
 
         if title and (len(title) < 3 or len(title) > 50):
             raise InvalidArgumentError(
-                "Cannot edit character. "
-                "Title must be at least 3 characters and no more than 50."
+                "Cannot edit character. Title must be at least 3 characters and no more than 50."
             )
 
         if description and len(description) > 500:
-            raise InvalidArgumentError(
-                "Cannot edit character. "
-                "Description must be no more than 500 characters."
-            )
+            raise InvalidArgumentError("Cannot edit character. Description must be no more than 500 characters.")
 
         if definition and len(definition) > 32000:
-            raise InvalidArgumentError(
-                "Cannot edit character. "
-                "Definition must be no more than 32000 characters."
-            )
+            raise InvalidArgumentError("Cannot edit character. Definition must be no more than 32000 characters.")
 
         request = await self.__requester.request_async(
             url="https://plus.character.ai/chat/character/update/",
@@ -331,11 +296,9 @@ class CharacterMethods:
 
         if request.status_code == 200:
             response = request.json()
-            if (
-                response.get("status", None) == "OK"
-                and response.get("character", None) is not None
-            ):
+            if response.get("status", None) == "OK" and response.get("character", None) is not None:
                 return Character(response.get("character"))
 
             raise EditError(f"Cannot edit character. {response.get('error', '')}")
+
         raise EditError("Cannot edit character.")

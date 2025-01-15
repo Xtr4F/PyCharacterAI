@@ -22,13 +22,11 @@ class CharacterShort(BaseCAI):
         self.upvotes: Optional[str] = options.get("upvotes", None)
 
         self.author_username: Optional[str] = options.get("user__username", None)
-        self.num_interactions: Optional[str] = options.get(
-            "participant__num_interactions", None
-        )
+        self.num_interactions: Optional[str] = options.get("participant__num_interactions", None)
 
         self.avatar: Optional[Avatar] = None
-        avatar_file_name = options.get("avatar_file_name", "")
 
+        avatar_file_name = options.get("avatar_file_name", "")
         if avatar_file_name != "":
             self.avatar = Avatar({"file_name": avatar_file_name})
 
@@ -51,13 +49,11 @@ class Character(BaseCAI):
         self.upvotes: Optional[str] = options.get("upvotes", None)
 
         self.author_username: Optional[str] = options.get("user__username", None)
-        self.num_interactions: Optional[str] = options.get(
-            "participant__num_interactions", None
-        )
+        self.num_interactions: Optional[str] = options.get("participant__num_interactions", None)
 
         self.avatar: Optional[Avatar] = None
-        avatar_file_name = options.get("avatar_file_name", "")
 
+        avatar_file_name = options.get("avatar_file_name", "")
         if avatar_file_name != "":
             self.avatar = Avatar({"file_name": avatar_file_name})
 

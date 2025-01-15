@@ -16,12 +16,10 @@ class Chat(BaseCAI):
         self.creator_id = options.get("creator_id")
 
         create_time = options.get("create_time")
-
         if create_time:
             try:
-                create_time = datetime.strptime(
-                    str(create_time), "%Y-%m-%dT%H:%M:%S.%fZ"
-                )
+                create_time = datetime.strptime(str(create_time), "%Y-%m-%dT%H:%M:%S.%fZ")
+
             except ValueError:
                 pass
 
@@ -41,10 +39,10 @@ class Chat(BaseCAI):
         # Some character information:
         self.character_name: Optional[str] = options.get("character_name", None)
         self.character_avatar: Optional[Avatar] = None
-        avatar_file_name = options.get("character_avatar_uri", "")
 
+        avatar_file_name = options.get("character_avatar_uri", "")
         if avatar_file_name != "":
-            self.avatar = Avatar({"file_name": avatar_file_name})
+            self.character_avatar = Avatar({"file_name": avatar_file_name})
 
 
 # Chat v1
@@ -55,12 +53,9 @@ class ChatHistory(BaseCAI):
         self.chat_id = options.get("external_id")
 
         create_time = options.get("created")
-
         if create_time:
             try:
-                create_time = datetime.strptime(
-                    str(create_time), "%Y-%m-%dT%H:%M:%S.%fZ"
-                )
+                create_time = datetime.strptime(str(create_time), "%Y-%m-%dT%H:%M:%S.%fZ")
 
             except ValueError:
                 pass
@@ -68,18 +63,14 @@ class ChatHistory(BaseCAI):
         self.create_time: Optional[datetime] = create_time
 
         last_interaction = options.get("last_interaction")
-
         if last_interaction:
             try:
-                last_interaction = datetime.strptime(
-                    str(last_interaction), "%Y-%m-%dT%H:%M:%S.%fZ"
-                )
+                last_interaction = datetime.strptime(str(last_interaction), "%Y-%m-%dT%H:%M:%S.%fZ")
+
             except ValueError:
                 pass
 
         self.last_interaction: Optional[datetime] = last_interaction
 
         messages = options.get("msgs", [])
-        self.preview_messages: List[HistoryMessage] = [
-            HistoryMessage(message) for message in messages
-        ]
+        self.preview_messages: List[HistoryMessage] = [HistoryMessage(message) for message in messages]

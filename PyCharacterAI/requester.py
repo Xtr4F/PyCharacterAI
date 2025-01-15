@@ -17,10 +17,7 @@ class Requester:
     def __init__(self, **kwargs):
         self.__extra_options = kwargs
 
-        self.__impersonate: Optional[str] = self.__extra_options.pop(
-            "impersonate", None
-        )
-
+        self.__impersonate: Optional[str] = self.__extra_options.pop("impersonate", None)
         self.__proxy: Optional[str] = self.__extra_options.pop("proxy", None)
 
         # debug information (TO-DO)
@@ -221,10 +218,9 @@ class Requester:
             if request_uuid:
                 self.__ws_clear_response_messages(request_uuid)
 
-    async def ws_send_and_receive_async(
-        self, message: Dict, token: str
-    ) -> AsyncGenerator:
+    async def ws_send_and_receive_async(self, message: Dict, token: str) -> AsyncGenerator:
         request_uuid = message.get("request_id", None)
+
         await self.__ws_send_async(message=message, token=token)
 
         try:
@@ -237,7 +233,6 @@ class Requester:
         except RequestError:
             # Okay, let's try again
             await self.__ws_connect_async(token=token)
-
             await self.__ws_send_async(message=message, token=token)
 
             async for message in self.__ws_receive_async(request_uuid=request_uuid):

@@ -56,3 +56,16 @@ Documentation = "https://github.com/Xtr4F/PyCharacterAI/blob/main/docs/welcome.m
 Repository = "https://github.com/Xtr4F/PyCharacterAI.git"
 Issues = "https://github.com/Xtr4F/PyCharacterAI/issues"
 
+
+
+[tool.ruff]
+line-length = 120
+indent-width = 4
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.lint]
+# Avoid enforcing line-length violations (`E501`)
+ignore = ["E501"]

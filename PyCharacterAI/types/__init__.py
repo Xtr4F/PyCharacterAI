@@ -17,4 +17,3 @@ __all__ = [
     "Avatar",
     "Voice",
 ]
-

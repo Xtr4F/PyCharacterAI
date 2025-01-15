@@ -16,8 +16,8 @@ class Account(BaseCAI):
         self.bio: str = options.get("bio", "")
 
         self.avatar: Optional[Avatar] = None
-        avatar_file_name = options.get("avatar_file_name", "")
 
+        avatar_file_name = options.get("avatar_file_name", "")
         if avatar_file_name != "":
             self.avatar = Avatar({"file_name": avatar_file_name})
 
@@ -39,8 +39,8 @@ class PublicUser(BaseCAI):
         self.bio: str = options.get("bio", "")
 
         self.avatar: Optional[Avatar] = None
-        avatar_file_name = options.get("avatar_file_name", "")
 
+        avatar_file_name = options.get("avatar_file_name", "")
         if avatar_file_name != "":
             self.avatar = Avatar({"file_name": avatar_file_name})
 
@@ -50,7 +50,6 @@ class PublicUser(BaseCAI):
         self.characters: List[CharacterShort] = []
 
         raw_characters = options.get("characters", [])
-
         if raw_characters != []:
             for raw_character in raw_characters:
                 self.characters.append(CharacterShort(raw_character))
@@ -68,8 +67,8 @@ class Persona(BaseCAI):
         self.definition = options.get("definition", "")
 
         self.avatar: Optional[Avatar] = None
-        avatar_file_name = options.get("avatar_file_name", "")
 
+        avatar_file_name = options.get("avatar_file_name", "")
         if avatar_file_name != "":
             self.avatar = Avatar({"file_name": avatar_file_name})
 

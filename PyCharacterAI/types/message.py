@@ -29,12 +29,9 @@ class TurnCandidate(BaseCAI):
         self.is_filtered = options.get("safety_truncated", False)
 
         create_time = options.get("create_time")
-
         if create_time:
             try:
-                create_time = datetime.strptime(
-                    str(create_time), "%Y-%m-%dT%H:%M:%S.%fZ"
-                )
+                create_time = datetime.strptime(str(create_time), "%Y-%m-%dT%H:%M:%S.%fZ")
 
             except ValueError:
                 pass
@@ -45,18 +42,16 @@ class TurnCandidate(BaseCAI):
 class Turn(BaseCAI):
     def __init__(self, options: Dict):
         super().__init__(options)
+
         turn_key = options["turn_key"]
 
         self.chat_id = turn_key["chat_id"]
         self.turn_id = turn_key["turn_id"]
 
         create_time = options.get("create_time", None)
-
         if create_time:
             try:
-                create_time = datetime.strptime(
-                    str(create_time), "%Y-%m-%dT%H:%M:%S.%fZ"
-                )
+                create_time = datetime.strptime(str(create_time), "%Y-%m-%dT%H:%M:%S.%fZ")
 
             except ValueError:
                 pass
@@ -64,12 +59,9 @@ class Turn(BaseCAI):
         self.create_time: Optional[datetime] = create_time
 
         last_update_time = options.get("last_update_time", None)
-
         if last_update_time:
             try:
-                last_update_time = datetime.strptime(
-                    str(last_update_time), "%Y-%m-%dT%H:%M:%S.%fZ"
-                )
+                last_update_time = datetime.strptime(str(last_update_time), "%Y-%m-%dT%H:%M:%S.%fZ")
 
             except ValueError:
                 pass
@@ -87,7 +79,6 @@ class Turn(BaseCAI):
 
         for raw_candidate in options.get("candidates", []):
             candidate = TurnCandidate(raw_candidate)
-
             self.candidates[candidate.candidate_id] = candidate
 
         self.primary_candidate_id: Optional[str] = options.get("primary_candidate_id")

@@ -1,12 +1,10 @@
 import os
 import json
-
 import base64
-
 import mimetypes
-from random import randint
-from typing import List, Optional, Union
 
+from random import randint
+from typing import Any, List, Optional, Union
 from urllib.parse import urlparse, quote
 
 from ..types import Avatar, Voice
@@ -28,17 +26,15 @@ class UtilsMethods:
         self.__client = client
         self.__requester = requester
 
-    async def ping(self, **kwargs) -> bool:
+    async def ping(self, **kwargs: Any) -> bool:
         request = await self.__requester.request_async(
             url="https://neo.character.ai/ping/",
             options={"headers": self.__client.get_headers(kwargs.get("token", None))},
         )
 
-        if request.status_code == 200:
-            return True
-        return False
+        return request.status_code == 200
 
-    async def fetch_voice(self, voice_id, **kwargs) -> Voice:
+    async def fetch_voice(self, voice_id, **kwargs: Any) -> Voice:
         request = await self.__requester.request_async(
             url=f"https://neo.character.ai/multimodal/api/v1/voices/{voice_id}",
             options={"headers": self.__client.get_headers(kwargs.get("token", None))},
@@ -49,7 +45,7 @@ class UtilsMethods:
 
         raise FetchError("Cannot fetch voice. Maybe voice does not exist?")
 
-    async def search_voices(self, voice_name: str, **kwargs) -> List[Voice]:
+    async def search_voices(self, voice_name: str, **kwargs: Any) -> List[Voice]:
         request = await self.__requester.request_async(
             url=f"https://neo.character.ai/multimodal/api/v1/voices/search?query={quote(voice_name)}",
             options={"headers": self.__client.get_headers(kwargs.get("token", None))},
@@ -61,7 +57,7 @@ class UtilsMethods:
 
         raise SearchError("Cannot search for voices.")
 
-    async def generate_image(self, prompt: str, **kwargs) -> List[str]:
+    async def generate_image(self, prompt: str, **kwargs: Any) -> List[str]:
         num_candidates: int = kwargs.get("num_candidates", 4)
 
         request = await self.__requester.request_async(
@@ -91,11 +87,10 @@ class UtilsMethods:
                     urls.append(url)
 
             return urls
+
         raise ActionError("Cannot generate image.")
 
-    async def upload_avatar(
-        self, image: str, check_image: bool = True, **kwargs
-    ) -> Avatar:
+    async def upload_avatar(self, image: str, check_image: bool = True, **kwargs: Any) -> Avatar:
         if os.path.isfile(image):
             with open(image, "rb") as image_file:
                 data = base64.b64encode(image_file.read())
@@ -133,9 +128,7 @@ class UtilsMethods:
                 avatar = Avatar({"file_name": file_name})
 
                 if check_image:
-                    image_request = await self.__requester.request_async(
-                        avatar.get_url()
-                    )
+                    image_request = await self.__requester.request_async(avatar.get_url())
 
                     if image_request.status_code != 200:
                         raise UploadError(f"Cannot upload avatar. {image_request.text}")
@@ -148,30 +141,17 @@ class UtilsMethods:
         )
 
     async def upload_voice(
-        self,
-        voice: Union[str, bytes],
-        name: str,
-        description: str = "",
-        visibility: str = "private",
-        **kwargs,
+        self, voice: Union[str, bytes], name: str, description: str = "", visibility: str = "private", **kwargs: Any
     ) -> Voice:
         if len(name) < 3 or len(name) > 20:
-            raise InvalidArgumentError(
-                "Cannot upload voice. "
-                "Name must be at least 3 characters and no more than 20."
-            )
+            raise InvalidArgumentError("Cannot upload voice. Name must be at least 3 characters and no more than 20.")
 
         if len(description) > 120:
-            raise InvalidArgumentError(
-                "Cannot upload voice. Description must be no more than 120 characters."
-            )
+            raise InvalidArgumentError("Cannot upload voice. Description must be no more than 120 characters.")
 
         visibility = visibility.lower()
-
         if visibility not in ["private", "public"]:
-            raise InvalidArgumentError(
-                'Cannot upload voice. Visibility must be "public" or "private"'
-            )
+            raise InvalidArgumentError('Cannot upload voice. Visibility must be "public" or "private"')
 
         mime = "audio/mpeg"
 
@@ -238,9 +218,7 @@ class UtilsMethods:
         if request.status_code in [200, 201]:
             try:
                 new_voice = Voice(request.json().get("voice"))
-                final_voice = await self.edit_voice(
-                    new_voice, name, description, visibility, **kwargs
-                )
+                final_voice = await self.edit_voice(new_voice, name, description, visibility, **kwargs)
 
                 return final_voice
 
@@ -255,7 +233,7 @@ class UtilsMethods:
         name: Optional[str] = None,
         description: Optional[str] = None,
         visibility: str = "private",
-        **kwargs,
+        **kwargs: Any,
     ) -> Voice:
         if not isinstance(voice, Voice):
             voice = await self.fetch_voice(voice, **kwargs)
@@ -271,27 +249,17 @@ class UtilsMethods:
                 visibility = voice.visibility
 
         if not name or not description:
-            raise InvalidArgumentError(
-                "Cannot edit voice. Name and description must be specified."
-            )
+            raise InvalidArgumentError("Cannot edit voice. Name and description must be specified.")
 
         if len(name) < 3 or len(name) > 20:
-            raise InvalidArgumentError(
-                "Cannot edit voice. "
-                "Name must be at least 3 characters and no more than 20."
-            )
+            raise InvalidArgumentError("Cannot edit voice. Name must be at least 3 characters and no more than 20.")
 
         if len(description) > 120:
-            raise InvalidArgumentError(
-                "Cannot edit voice. Description must be no more than 120 characters."
-            )
+            raise InvalidArgumentError("Cannot edit voice. Description must be no more than 120 characters.")
 
         visibility = visibility.lower()
-
         if visibility not in ["private", "public"]:
-            raise InvalidArgumentError(
-                'Cannot edit voice. Visibility must be "public" or "private"'
-            )
+            raise InvalidArgumentError('Cannot edit voice. Visibility must be "public" or "private"')
 
         request = await self.__requester.request_async(
             url=f"https://neo.character.ai/multimodal/api/v1/voices/{voice.voice_id}",
@@ -329,7 +297,7 @@ class UtilsMethods:
 
         raise EditError("Cannot edit voice. Maybe your audio is invalid?")
 
-    async def delete_voice(self, voice_id: str, **kwargs) -> bool:
+    async def delete_voice(self, voice_id: str, **kwargs: Any) -> bool:
         request = await self.__requester.request_async(
             url=f"https://neo.character.ai/multimodal/api/v1/voices/{voice_id}",
             options={
@@ -344,7 +312,7 @@ class UtilsMethods:
         raise DeleteError("Cannot delete voice.")
 
     async def generate_speech(
-        self, chat_id: str, turn_id: str, candidate_id: str, voice_id: str, **kwargs
+        self, chat_id: str, turn_id: str, candidate_id: str, voice_id: str, **kwargs: Any
     ) -> Union[bytes, str]:
         return_url = kwargs.get("return_url", False)
 

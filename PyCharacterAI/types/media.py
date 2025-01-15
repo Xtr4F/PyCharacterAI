@@ -42,12 +42,10 @@ class Voice(BaseCAI):
         self.internal_status = options.get("internalStatus", "active")
 
         last_update_time = options.get("lastUpdateTime", None)
-
         if last_update_time:
             try:
-                last_update_time = datetime.strptime(
-                    str(last_update_time), "%Y-%m-%dT%H:%M:%S.%fZ"
-                )
+                last_update_time = datetime.strptime(str(last_update_time), "%Y-%m-%dT%H:%M:%S.%fZ")
+
             except ValueError:
                 pass
 
