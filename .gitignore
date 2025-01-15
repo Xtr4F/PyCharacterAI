@@ -1,8 +1,11 @@
 pyrightconfig.json
 
-tests 
-scripts
+dist
+tests
 
 **__pycache__
-**venv/
+**venv*
+*.egg-info
+
+*.python-version
 *.py[cod]
