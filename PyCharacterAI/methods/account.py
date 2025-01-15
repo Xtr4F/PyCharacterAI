@@ -243,7 +243,7 @@ class AccountMethods:
             raise InvalidArgumentError("Cannot create persona. Definition must be no more than 728 characters.")
 
         request = await self.__requester.request_async(
-            url="https://plus.character.ai/chat/character/create/",
+            url="https://plus.character.ai/chat/persona/create/",
             options={
                 "method": "POST",
                 "headers": self.__client.get_headers(kwargs.get("token", None)),
