@@ -203,6 +203,9 @@ class Requester:
                     yield None  # signaling that session is closed
                     break
 
+                except ConnectionResetError:
+                    raise RequestError
+
                 command = response_json.get("command", None)
 
                 if command in [None, "ok"] or request_uuid is None:
@@ -221,9 +224,9 @@ class Requester:
     async def ws_send_and_receive_async(self, message: Dict, token: str) -> AsyncGenerator:
         request_uuid = message.get("request_id", None)
 
-        await self.__ws_send_async(message=message, token=token)
-
         try:
+            await self.__ws_send_async(message=message, token=token)
+
             async for message in self.__ws_receive_async(request_uuid=request_uuid):
                 yield message
 
