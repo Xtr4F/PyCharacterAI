@@ -255,6 +255,7 @@ class ChatMethods:
                         "creator_id": self.__client.get_account_id(),
                         "visibility": "VISIBILITY_PRIVATE",
                         "character_id": character_id,
+                        "preferred_model_type": "MODEL_TYPE_SMART", 
                         "type": "TYPE_ONE_ON_ONE",
                     },
                     "with_greeting": greeting,
