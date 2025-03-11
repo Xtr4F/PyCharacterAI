@@ -245,6 +245,17 @@ class ChatMethods:
         request_id = str(uuid.uuid4())
         chat_id = str(uuid.uuid4())
 
+        # This parameter specifies which model to use when creating a new chat.
+        # This is still an experimental feature and will be fully added and documented
+        # when I am sure it is stable. Use at your own risk.
+        #
+        # At the time of this commit there are 4 models available:
+        # MODEL_TYPE_FAST - “Meow” model
+        # MODEL_TYPE_BALANCED - “Roar” model
+        # MODEL_TYPE_SMART - “Nyan” model (currently available without subscription, probably a bug)
+        # MODEL_TYPE_FAMILY_FRIENDLY - “Goro” model
+        model_type = kwargs.get("model_type")
+
         request = self.__requester.ws_send_and_receive_async(
             {
                 "command": "create_chat",
@@ -256,6 +267,8 @@ class ChatMethods:
                         "visibility": "VISIBILITY_PRIVATE",
                         "character_id": character_id,
                         "type": "TYPE_ONE_ON_ONE",
+                        # optional key
+                        **({"preferred_model_type": model_type} if model_type else {}),
                     },
                     "with_greeting": greeting,
                 },
