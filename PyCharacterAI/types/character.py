@@ -18,8 +18,10 @@ class CharacterShort(BaseCAI):
         self.greeting = options.get("greeting", "")
         self.description = options.get("description", "")
         self.definition = options.get("definition", "")
-
-        self.upvotes: Optional[str] = options.get("upvotes", None)
+        
+    
+        upvotes = options.get("upvotes", None) or options.get("num_likes", None)
+        self.upvotes: Optional[str] = str(upvotes) if upvotes else None
 
         self.author_username: Optional[str] = options.get("user__username", None)
         self.num_interactions: Optional[str] = options.get("participant__num_interactions", None)

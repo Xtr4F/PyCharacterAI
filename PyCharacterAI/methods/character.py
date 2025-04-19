@@ -117,13 +117,22 @@ class CharacterMethods:
         raise FetchError("Cannot fetch character information.")
 
     async def search_characters(self, character_name: str, **kwargs: Any) -> List[CharacterShort]:
+        payload = {
+            '0': {
+                'json': {
+                    'searchQuery': quote(character_name)
+                }
+            }
+        }
+
         request = await self.__requester.request_async(
-            url=f"https://plus.character.ai/chat/characters/search/?query={quote(character_name)}",
+            url=f"https://character.ai/api/trpc/search.search?batch=1"
+                f"&input={json.dumps(payload, separators=(',', ':'))}",
             options={"headers": self.__client.get_headers(kwargs.get("token", None))},
         )
-
+        
         if request.status_code == 200:
-            raw_characters = request.json().get("characters", [])
+            raw_characters = (request.json())[0]["result"]["data"]["json"]["characters"]
             return [CharacterShort(raw_character) for raw_character in raw_characters]
 
         raise SearchError("Cannot search for characters.")
