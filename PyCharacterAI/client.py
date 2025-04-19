@@ -41,11 +41,12 @@ class BaseClient:
         token: Optional[str] = None,
         web_next_auth: Optional[str] = None,
         include_web_next_auth: bool = False,
+        **kwargs: Any
     ) -> Dict:
-        headers = {
-            "authorization": f"Token {token or self.get_token()}",
-            "Content-Type": "application/json",
-        }
+        headers = {}
+        if kwargs.get("authorization", True):
+            headers["authorization"] = f"Token {token or self.get_token()}"
+        headers["Content-Type"] = "application/json"
 
         if include_web_next_auth:
             headers["cookie"] = web_next_auth or self.get_web_next_auth() or ""

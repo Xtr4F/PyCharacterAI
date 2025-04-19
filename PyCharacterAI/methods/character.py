@@ -128,7 +128,7 @@ class CharacterMethods:
         request = await self.__requester.request_async(
             url=f"https://character.ai/api/trpc/search.search?batch=1"
                 f"&input={json.dumps(payload, separators=(',', ':'))}",
-            options={"headers": self.__client.get_headers(kwargs.get("token", None))},
+            options={"headers": self.__client.get_headers(authorization=False)},
         )
         
         if request.status_code == 200:
