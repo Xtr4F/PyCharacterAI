@@ -138,14 +138,23 @@ class CharacterMethods:
         raise SearchError("Cannot search for characters.")
 
     async def search_creators(self, creator_name: str, **kwargs: Any) -> List[str]:
+        payload = {
+            '0': {
+                'json': {
+                    'searchQuery': quote(creator_name)
+                }
+            }
+        }
+
         request = await self.__requester.request_async(
-            url=f"https://plus.character.ai/chat/creators/search/?query={quote(creator_name)}",
-            options={"headers": self.__client.get_headers(kwargs.get("token", None))},
+            url=f"https://character.ai/api/trpc/search.searchCreators?batch=1"
+                f"&input={json.dumps(payload, separators=(',', ':'))}",
+            options={"headers": self.__client.get_headers(authorization=False)},
         )
 
         if request.status_code == 200:
-            raw_creators = request.json().get("creators")
-            return [creator["name"] for creator in raw_creators]
+            raw_creators = (request.json())[0]["result"]["data"]["json"]["creators"]
+            return [creator["username"] for creator in raw_creators]
 
         raise SearchError("Cannot search for creators.")
 
