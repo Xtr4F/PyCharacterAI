@@ -127,7 +127,7 @@ class Requester:
             self.__ws = await self.__ws_session.ws_connect(
                 url="wss://neo.character.ai/ws/",
                 headers={
-                    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                     "AppleWebKit/537.36 (KHTML, like Gecko) "
                     "Chrome/120.0.0.0 Safari/537.36",
                     "Cookie": f'HTTP_AUTHORIZATION="Token {token}"',
