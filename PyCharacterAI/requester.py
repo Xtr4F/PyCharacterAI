@@ -7,7 +7,7 @@ from typing import Dict, AsyncGenerator, List, Optional, Tuple, cast
 from curl_cffi import requests as curl_cffi_requests
 
 # for websockets
-import aiohttp
+import websockets
 
 
 from .exceptions import RequestError, AuthenticationError
@@ -23,8 +23,7 @@ class Requester:
         # debug information (TO-DO)
         # self.__debug: bool = self.__extra_options.pop("requester_debug", False)
 
-        self.__ws_session: Optional[aiohttp.ClientSession] = None
-        self.__ws: Optional[aiohttp.ClientWebSocketResponse] = None
+        self.__ws_connection: Optional[websockets.ClientConnection] = None
         self.__ws_response_messages: Dict[str, List] = {}
 
     # ================================================================== #
@@ -105,50 +104,38 @@ class Requester:
     # ================================================================== #
 
     async def ws_close_async(self) -> None:
-        if self.__ws:
+        if self.__ws_connection:
             try:
-                await self.__ws.close()
+                await self.__ws_connection.close()
             finally:
-                self.__ws = None
-
-        if self.__ws_session:
-            try:
-                await self.__ws_session.close()
-            finally:
-                self.__ws_session = None
+                self.__ws_connection = None
 
     async def __ws_connect_async(self, token: str) -> None:
-        if self.__ws_session or self.__ws:
+        if self.__ws_connection:
             await self.ws_close_async()
-
-        self.__ws_session = aiohttp.ClientSession()
-
+        
         try:
-            self.__ws = await self.__ws_session.ws_connect(
-                url="wss://neo.character.ai/ws/",
-                headers={
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/120.0.0.0 Safari/537.36",
-                    "Cookie": f'HTTP_AUTHORIZATION="Token {token}"',
-                },
-                proxy=self.__proxy,
-                ssl=False,
+            self.__ws_connection = await websockets.connect(
+                    uri="wss://neo.character.ai/ws/",
+                    additional_headers={
+                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/120.0.0.0 Safari/537.36",
+                        "Cookie": f'HTTP_AUTHORIZATION="Token {token}"',
+                    },
+                    proxy=self.__proxy
             )
 
-        except aiohttp.WSServerHandshakeError:
+        except websockets.exceptions.WebSocketException:
             raise AuthenticationError("maybe your token is invalid?")
 
-        if not self.__ws_connected:
+        if not self.__ws_connection:
             raise AuthenticationError("maybe your token is invalid?")
-
-    @property
-    def __ws_connected(self) -> bool:
-        return self.__ws is not None and self.__ws_session is not None
 
     async def __ws_ensure_connection(self, token: str) -> None:
-        if not self.__ws_connected:
+        if not self.__ws_connection:
             await self.__ws_connect_async(token=token)
+        
 
     def __ws_clear_response_messages(self, request_uuid: Optional[str] = None) -> None:
         if request_uuid:
@@ -158,11 +145,10 @@ class Requester:
 
     async def __ws_send_async(self, message: Dict, token: str) -> None:
         await self.__ws_ensure_connection(token=token)
-
-        try:
-            await self.__ws.send_json(message)  # pyright: ignore
-
-        except ConnectionResetError:
+        
+        if self.__ws_connection:
+            await self.__ws_connection.send(json.dumps(message)) 
+        else:
             raise RequestError
 
     async def __ws_receive_async(self, request_uuid: Optional[str]) -> AsyncGenerator:
@@ -180,31 +166,25 @@ class Requester:
 
                 # else
                 try:
-                    response = await self.__ws.receive()  # pyright: ignore
-
-                    if response.type is aiohttp.WSMsgType.TEXT:
-                        response_str = cast(str, response.data)
-                        response_json = json.loads(response_str)
-
-                    elif response.type is aiohttp.WSMsgType.CLOSE:
-                        await self.ws_close_async()
-                        raise RequestError("Connection was closed by server")
-
-                    elif response.type is aiohttp.WSMsgType.CLOSING:
-                        raise RequestError("Connection is closing")
-
-                    elif response.type is aiohttp.WSMsgType.CLOSED:
-                        raise RequestError("Connection is closed")
+                    if self.__ws_connection:
+                        try: 
+                            response = await self.__ws_connection.recv(decode=True)
+                        except (
+                            websockets.exceptions.ConnectionClosedOK, 
+                            websockets.exceptions.ConnectionClosedError,
+                            websockets.exceptions.ConnectionClosed
+                        ):
+                            await self.ws_close_async()
+                            raise RequestError("Connection is closed")
+                        
+                        response_json = json.loads(response)
 
                     else:
-                        raise RequestError()
+                        raise RequestError
 
                 except asyncio.CancelledError:
                     yield None  # signaling that session is closed
                     break
-
-                except ConnectionResetError:
-                    raise RequestError
 
                 command = response_json.get("command", None)
 
