@@ -8,10 +8,10 @@ exclude = ["/.*", "/docs", "/tests"]
 
 [project]
 name = "PyCharacterAI"
-version = "2.2.42"
+version = "2.2.43"
 description = "An unofficial asynchronous api wrapper for Character AI."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = "MIT"
 
 authors = [{ name = "XtraF", email = "igoromarov15@gmail.com" }]
@@ -38,7 +38,7 @@ classifiers = [
         "Programming Language :: Python :: 3.13",
 ]
 
-dependencies = ["curl-cffi==0.7.1", "websockets>=15.0.1"]
+dependencies = ["curl-cffi>=0.11.1"]
 
 [project.urls]
 Homepage = "https://github.com/Xtr4F/PyCharacterAI"
@@ -58,3 +58,8 @@ indent-style = "space"
 [tool.ruff.lint]
 # Avoid enforcing line-length violations (`E501`)
 ignore = ["E501"]
+
+[tool.uv.workspace]
+members = [
+    "tests",
+]

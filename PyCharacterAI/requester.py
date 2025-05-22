@@ -1,14 +1,10 @@
 import asyncio
 import json
 
-from typing import Dict, AsyncGenerator, List, Optional, Tuple, cast
+from typing import Dict, AsyncGenerator, List, Optional, Tuple
 
 # for requests
-from curl_cffi import requests as curl_cffi_requests
-
-# for websockets
-import websockets
-
+import curl_cffi
 
 from .exceptions import RequestError, AuthenticationError
 
@@ -17,13 +13,15 @@ class Requester:
     def __init__(self, **kwargs):
         self.__extra_options = kwargs
 
-        self.__impersonate: Optional[str] = self.__extra_options.pop("impersonate", None)
+        self.__impersonate: Optional[curl_cffi.BrowserTypeLiteral] = self.__extra_options.pop("impersonate", None)
         self.__proxy: Optional[str] = self.__extra_options.pop("proxy", None)
 
         # debug information (TO-DO)
         # self.__debug: bool = self.__extra_options.pop("requester_debug", False)
+        
+        self.__requester_session: Optional[curl_cffi.AsyncSession] = None
+        self.__ws: Optional[curl_cffi.AsyncWebSocket] = None
 
-        self.__ws_connection: Optional[websockets.ClientConnection] = None
         self.__ws_response_messages: Dict[str, List] = {}
 
     # ================================================================== #
@@ -35,18 +33,37 @@ class Requester:
             self,
             url: str,
             status_code: int,
-            headers: List[Tuple[str, str]],
+            headers: List[Tuple[str, str | None]],
             text: str,
             content: bytes,
         ):
             self.url: str = url
             self.status_code: int = status_code
-            self.headers: List[Tuple[str, str]] = headers
+            self.headers: List[Tuple[str, str | None]] = headers
             self.text: str = text
             self.content: bytes = content
 
         def json(self):
             return json.loads(self.text)
+    
+    async def open_session(self) -> None: 
+        self.__requester_session = curl_cffi.AsyncSession(
+            impersonate=self.__impersonate or"chrome136",
+            proxy=self.__proxy, 
+            **self.__extra_options
+        )
+
+    async def close_session(self) -> None:
+        if self.__requester_session:
+            try:
+                await self.__requester_session.close()
+            
+            finally:
+                self.__requester_session = None
+
+    async def ensure_session(self) -> None:
+        if not self.__requester_session:
+            await self.open_session()
 
     async def request_async(self, url: str, options=None) -> Response:
         if options is None:
@@ -56,31 +73,27 @@ class Requester:
         headers = options.get("headers", {})
         body = options.get("body", {})
 
-        raw_response: Optional[curl_cffi_requests.Response] = None
+        raw_response: Optional[curl_cffi.Response] = None
 
-        try:
-            async with curl_cffi_requests.AsyncSession(
-                impersonate=self.__impersonate or "chrome",
-                proxy=self.__proxy,
-                **self.__extra_options,
-            ) as session:
-                if method == "GET":
-                    raw_response = await session.get(url, headers=headers)
-
-                elif method == "POST":
-                    raw_response = await session.post(url, headers=headers, data=body)
-
-                elif method == "PUT":
-                    raw_response = await session.put(url, headers=headers, data=body)
-
-                elif method == "PATCH":
-                    raw_response = await session.patch(url, headers=headers, data=body)
-
-                elif method == "DELETE":
-                    raw_response = await session.delete(url, headers=headers)
-
-        except curl_cffi_requests.errors.RequestsError:
+        await self.ensure_session()
+        if not self.__requester_session:
             raise RequestError
+
+        if method == "GET":
+            raw_response = await self.__requester_session.get(url, headers=headers)
+
+        elif method == "POST":
+            raw_response = await self.__requester_session.post(url, headers=headers, data=body)
+
+        elif method == "PUT":
+            raw_response = await self.__requester_session.put(url, headers=headers, data=body)
+
+        elif method == "PATCH":
+            raw_response = await self.__requester_session.patch(url, headers=headers, data=body)
+
+        elif method == "DELETE":
+            raw_response = await self.__requester_session.delete(url, headers=headers)
+
 
         if not raw_response:
             raise RequestError
@@ -104,39 +117,36 @@ class Requester:
     # ================================================================== #
 
     async def ws_close_async(self) -> None:
-        if self.__ws_connection:
+        if self.__ws:
             try:
-                await self.__ws_connection.close()
+                await self.__ws.close()
             finally:
-                self.__ws_connection = None
+                self.__ws = None
 
     async def __ws_connect_async(self, token: str) -> None:
-        if self.__ws_connection:
+        await self.ensure_session()
+        if not self.__requester_session:
+            raise RequestError
+
+        if self.__ws:
             await self.ws_close_async()
         
         try:
-            self.__ws_connection = await websockets.connect(
-                    uri="wss://neo.character.ai/ws/",
-                    additional_headers={
-                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                        "AppleWebKit/537.36 (KHTML, like Gecko) "
-                        "Chrome/120.0.0.0 Safari/537.36",
-                        "Cookie": f'HTTP_AUTHORIZATION="Token {token}"',
-                    },
-                    proxy=self.__proxy
+            self.__ws = await self.__requester_session.ws_connect(
+                url="wss://neo.character.ai/ws/",
+                cookies={"HTTP_AUTHORIZATION": f"Token {token}"}
             )
 
-        except websockets.exceptions.WebSocketException:
+        except curl_cffi.CurlError:
             raise AuthenticationError("maybe your token is invalid?")
 
-        if not self.__ws_connection:
+        if not self.__ws:
             raise AuthenticationError("maybe your token is invalid?")
 
     async def __ws_ensure_connection(self, token: str) -> None:
-        if not self.__ws_connection:
+        if not self.__ws:
             await self.__ws_connect_async(token=token)
         
-
     def __ws_clear_response_messages(self, request_uuid: Optional[str] = None) -> None:
         if request_uuid:
             self.__ws_response_messages.pop(request_uuid, None)
@@ -146,10 +156,10 @@ class Requester:
     async def __ws_send_async(self, message: Dict, token: str) -> None:
         await self.__ws_ensure_connection(token=token)
         
-        if self.__ws_connection:
-            await self.__ws_connection.send(json.dumps(message)) 
-        else:
+        if not self.__ws:
             raise RequestError
+        
+        await self.__ws.send_json(message)
 
     async def __ws_receive_async(self, request_uuid: Optional[str]) -> AsyncGenerator:
         try:
@@ -166,14 +176,10 @@ class Requester:
 
                 # else
                 try:
-                    if self.__ws_connection:
+                    if self.__ws:
                         try: 
-                            response = await self.__ws_connection.recv(decode=True)
-                        except (
-                            websockets.exceptions.ConnectionClosedOK, 
-                            websockets.exceptions.ConnectionClosedError,
-                            websockets.exceptions.ConnectionClosed
-                        ):
+                            response = await self.__ws.recv_str()
+                        except (curl_cffi.WebSocketClosed, curl_cffi.WebSocketError):
                             await self.ws_close_async()
                             raise RequestError("Connection is closed")
                         
