@@ -6,7 +6,7 @@ from typing import Dict, AsyncGenerator, List, Optional, Tuple
 # for requests
 import curl_cffi
 
-from .exceptions import RequestError, AuthenticationError
+from .exceptions import RequestError, AuthenticationError, WebsocketError
 
 
 class Requester:
@@ -179,9 +179,14 @@ class Requester:
                     if self.__ws:
                         try: 
                             response = await self.__ws.recv_str()
-                        except (curl_cffi.WebSocketClosed, curl_cffi.WebSocketError):
-                            await self.ws_close_async()
-                            raise RequestError("Connection is closed")
+                        except curl_cffi.WebSocketClosed:
+                            raise WebsocketError
+
+                        except curl_cffi.WebSocketError:
+                            try:
+                                await self.ws_close_async()
+                            finally:
+                                raise RequestError
                         
                         response_json = json.loads(response)
 

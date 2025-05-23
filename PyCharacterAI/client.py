@@ -80,6 +80,7 @@ class AsyncClient(BaseClient):
 
     async def close_session(self) -> None:
         await self.__requester.ws_close_async()
+        await self.__requester.close_session()
 
 
 async def get_client(token: str, **kwargs: Any) -> AsyncClient:
