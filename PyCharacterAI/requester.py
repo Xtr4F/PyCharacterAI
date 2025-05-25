@@ -6,7 +6,7 @@ from typing import Dict, AsyncGenerator, List, Optional, Tuple
 # for requests
 import curl_cffi
 
-from .exceptions import RequestError, AuthenticationError, WebsocketError
+from .exceptions import RequestError, AuthenticationError, WebsocketClosedError, WebsocketError
 
 
 class Requester:
@@ -120,6 +120,10 @@ class Requester:
         if self.__ws:
             try:
                 await self.__ws.close()
+            
+            except curl_cffi.CurlError:
+                raise WebsocketClosedError
+
             finally:
                 self.__ws = None
 
@@ -157,9 +161,15 @@ class Requester:
         await self.__ws_ensure_connection(token=token)
         
         if not self.__ws:
-            raise RequestError
+            raise WebsocketError
         
-        await self.__ws.send_json(message)
+        try:
+            await self.__ws.send_json(message)
+
+        except curl_cffi.CurlError:
+            await self.ws_close_async()
+            raise WebsocketError
+
 
     async def __ws_receive_async(self, request_uuid: Optional[str]) -> AsyncGenerator:
         try:
@@ -176,22 +186,17 @@ class Requester:
 
                 # else
                 try:
-                    if self.__ws:
-                        try: 
-                            response = await self.__ws.recv_str()
-                        except curl_cffi.WebSocketClosed:
-                            raise WebsocketError
+                    if not self.__ws:
+                        raise WebsocketError
 
-                        except curl_cffi.WebSocketError:
-                            try:
-                                await self.ws_close_async()
-                            finally:
-                                raise RequestError
+                    try: 
+                        response = await self.__ws.recv_str()
+
+                    except curl_cffi.CurlError:
+                        await self.ws_close_async()
+                        raise WebsocketError
                         
-                        response_json = json.loads(response)
-
-                    else:
-                        raise RequestError
+                    response_json = json.loads(response)
 
                 except asyncio.CancelledError:
                     yield None  # signaling that session is closed
@@ -214,20 +219,18 @@ class Requester:
 
     async def ws_send_and_receive_async(self, message: Dict, token: str) -> AsyncGenerator:
         request_uuid = message.get("request_id", None)
+        retries = 0
+        
+        while True:
+            try:
+                await self.__ws_send_async(message=message, token=token)
+                async for message in self.__ws_receive_async(request_uuid=request_uuid):
+                    yield message
+            
+            except WebsocketClosedError:
+                if retries < 3:
+                    retries += 1
+                else: 
+                    raise RequestError
 
-        try:
-            await self.__ws_send_async(message=message, token=token)
 
-            async for message in self.__ws_receive_async(request_uuid=request_uuid):
-                yield message
-
-        # Something went wrong. Probably, connection was closed.
-        # ! There should be a better way of handling this, feel free to open a PR.
-
-        except RequestError:
-            # Okay, let's try again
-            await self.__ws_connect_async(token=token)
-            await self.__ws_send_async(message=message, token=token)
-
-            async for message in self.__ws_receive_async(request_uuid=request_uuid):
-                yield message
