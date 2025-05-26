@@ -389,12 +389,16 @@ class ChatMethods:
             async for raw_response in request:
                 if raw_response is None:
                     raise SessionClosedError
+                
+                command = raw_response.get("command", None)
+                if not command:
+                    raise ActionError("Cannot send message.")
 
-                if raw_response["command"] == "neo_error":
+                if command == "neo_error":
                     error_comment = raw_response.get("comment", "")
                     raise ActionError(f"Cannot send message. {error_comment}")
 
-                if raw_response["command"] in ["add_turn", "update_turn"]:
+                elif command in ["add_turn", "update_turn"]:
                     # Skip first response
                     if raw_response["turn"].get("author", {}).get("is_human", False):
                         continue
@@ -403,6 +407,12 @@ class ChatMethods:
 
                     if raw_response["turn"].get("candidates")[0].get("is_final", False):
                         break
+
+                elif command == "filter_user_input_self_harm":
+                    raise ActionError("Cannot send message. Self harm message detected")
+
+                else:
+                    continue
 
         if streaming:
             return responses()
