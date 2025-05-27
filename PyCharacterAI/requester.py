@@ -13,6 +13,9 @@ class Requester:
     def __init__(self, **kwargs):
         self.__extra_options = kwargs
 
+        self.__websocket_headers: Optional[Dict[str, str]] = self.__extra_options.pop("websocket_headers", None)
+        self.__websocket_default_headers: bool = self.__extra_options.pop("websocket_default_headers", True)
+
         self.__impersonate: Optional[curl_cffi.BrowserTypeLiteral] = self.__extra_options.pop("impersonate", None)
         self.__proxy: Optional[str] = self.__extra_options.pop("proxy", None)
 
@@ -48,7 +51,7 @@ class Requester:
     
     async def open_session(self) -> None: 
         self.__requester_session = curl_cffi.AsyncSession(
-            impersonate=self.__impersonate or"chrome136",
+            impersonate=self.__impersonate or "firefox135",
             proxy=self.__proxy, 
             **self.__extra_options
         )
@@ -137,7 +140,10 @@ class Requester:
         
         try:
             self.__ws = await self.__requester_session.ws_connect(
+                impersonate="firefox135" or self.__impersonate,
                 url="wss://neo.character.ai/ws/",
+                headers=self.__websocket_headers,
+                default_headers=self.__websocket_default_headers,
                 cookies={"HTTP_AUTHORIZATION": f"Token {token}"}
             )
 
