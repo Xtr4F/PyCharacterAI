@@ -561,30 +561,25 @@ class ChatMethods:
         raise EditError("Cannot edit message.")
 
     async def delete_messages(self, chat_id: str, turn_ids: List[str], **kwargs: Any) -> bool:
-        request_id = str(uuid.uuid4())
+        request = await self.__requester.request_async(
+            url=f"https://neo.character.ai/turns/{chat_id}/remove",
+            options={
+                "method": "POST",
+                "headers": self.__client.get_headers(kwargs.get("token", None)),
+                "body": json.dumps({
+                    "turn_ids": turn_ids
+                })
+            }
+        )
+        
+        response = request.json()
 
-        ws_message = {
-            "command": "remove_turns",
-            "origin_id": "web-next",
-            "payload": {"chat_id": str(chat_id), "turn_ids": turn_ids},
-            "request_id": str(request_id),
-        }
+        if request.status_code == 200:
+            return True
 
-        request = self.__requester.ws_send_and_receive_async(ws_message, token=self.__client.get_token())
-
-        async for raw_response in request:
-            if raw_response is None:
-                raise SessionClosedError
-
-            if raw_response["command"] == "neo_error":
-                error_comment = raw_response.get("comment", "")
-                raise DeleteError(f"Cannot delete messages. {error_comment}")
-
-            if raw_response["command"] == "remove_turns_response":
-                return True
-
-            break
-
+        if response.get("command", "") == "neo_error":
+            error_comment = response.get("comment", "")
+            raise DeleteError(f"Cannot delete messages. {error_comment}")
         raise DeleteError("Cannot delete messages.")
 
     async def delete_message(self, chat_id: str, turn_id: str, **kwargs: Any) -> bool:
