@@ -355,6 +355,12 @@ class UtilsMethods:
             if response.get("command", "") == "neo_error":
                 error_comment = response.get("comment", "")
                 raise ActionError(f"Cannot generate speech. {error_comment}")
+            elif (error := response.get("error", {})):
+                message = error.get("message", "")
+                raise ActionError(f"Cannot generate speech. {message}")
+            elif (message := response.get("message")):
+                raise ActionError(f"Cannot generate speech. {message}")
+            raise ActionError("Cannot generate speech.")
 
         audio_url = response.get("replayUrl", "")
 
