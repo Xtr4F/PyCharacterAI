@@ -50,9 +50,11 @@ class CharacterMethods:
             url="https://neo.character.ai/recommendation/v1/user",
             options={"headers": self.__client.get_headers(kwargs.get("token", None))},
         )
+        
+        response = request.json()
 
         if request.status_code == 200:
-            characters_raw = request.json().get("characters", [])
+            characters_raw = response.get("characters", [])
             characters = []
 
             for character_raw in characters_raw:
@@ -60,6 +62,9 @@ class CharacterMethods:
 
             return characters
 
+        if response.get("command", "") == "neo_error":
+            error_comment = response.get("comment", "")
+            raise FetchError(f"Cannot fetch recommended characters. {error_comment}")
         raise FetchError("Cannot fetch recommended characters.")
 
     async def fetch_featured_characters(self, **kwargs: Any) -> List[CharacterShort]:
@@ -67,9 +72,11 @@ class CharacterMethods:
             url="https://plus.character.ai/chat/characters/featured_v2/",
             options={"headers": self.__client.get_headers(kwargs.get("token", None))},
         )
+        
+        response = request.json()
 
         if request.status_code == 200:
-            characters_raw = request.json().get("characters", [])
+            characters_raw = response.get("characters", [])
             characters = []
 
             for character_raw in characters_raw:
@@ -77,6 +84,9 @@ class CharacterMethods:
 
             return characters
 
+        if response.get("command", "") == "neo_error":
+            error_comment = response.get("comment", "")
+            raise FetchError(f"Cannot fetch featured characters. {error_comment}")
         raise FetchError("Cannot fetch featured characters.")
 
     async def fetch_similar_characters(self, character_id: str, **kwargs: Any) -> List[CharacterShort]:
@@ -84,9 +94,11 @@ class CharacterMethods:
             url=f"https://neo.character.ai/recommendation/v1/character/{character_id}",
             options={"headers": self.__client.get_headers(kwargs.get("token", None))},
         )
+        
+        response = request.json()
 
         if request.status_code == 200:
-            characters_raw = request.json().get("characters", [])
+            characters_raw = response.get("characters", [])
             characters = []
 
             for character_raw in characters_raw:
@@ -94,6 +106,9 @@ class CharacterMethods:
 
             return characters
 
+        if response.get("command", "") == "neo_error":
+            error_comment = response.get("comment", "")
+            raise FetchError(f"Cannot fetch similar characters. {error_comment}")
         raise FetchError("Cannot fetch similar characters.")
 
     async def fetch_character_info(self, character_id: str, **kwargs: Any) -> Character:

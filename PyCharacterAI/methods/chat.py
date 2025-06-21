@@ -53,9 +53,11 @@ class ChatMethods:
                 "headers": self.__client.get_headers(kwargs.get("token", None)),
             },
         )
+        
+        response = request.json()
 
         if request.status_code == 200:
-            raw_chats = request.json().get("chats", [])
+            raw_chats = response.get("chats", [])
             chats = []
 
             for raw_chat in raw_chats:
@@ -63,6 +65,9 @@ class ChatMethods:
 
             return chats
 
+        if response.get("command", "") == "neo_error":
+            error_comment = response.get("comment", "")
+            raise FetchError(f"Cannot fetch chats. {error_comment}")
         raise FetchError("Cannot fetch chats.")
 
     async def fetch_chat(self, chat_id: str, **kwargs: Any) -> Chat:
@@ -72,13 +77,17 @@ class ChatMethods:
                 "headers": self.__client.get_headers(kwargs.get("token", None)),
             },
         )
+        
+        response = request.json()
 
         if request.status_code == 200:
-            response = request.json()
             raw_chat = response.get("chat", None)
             if raw_chat:
                 return Chat(raw_chat)
 
+        if response.get("command", "") == "neo_error":
+            error_comment = response.get("comment", "")
+            raise FetchError(f"Cannot fetch chat. {error_comment}")
         raise FetchError("Cannot fetch chat.")
 
     async def fetch_recent_chats(self, **kwargs: Any) -> List[Chat]:
@@ -86,9 +95,11 @@ class ChatMethods:
             url="https://neo.character.ai/chats/recent/",
             options={"headers": self.__client.get_headers(kwargs.get("token", None))},
         )
+        
+        response = request.json()
 
         if request.status_code == 200:
-            raw_chats = request.json().get("chats", [])
+            raw_chats = response.get("chats", [])
             chats = []
 
             for raw_chat in raw_chats:
@@ -96,6 +107,9 @@ class ChatMethods:
 
             return chats
 
+        if response.get("command", "") == "neo_error":
+            error_comment = response.get("comment", "")
+            raise FetchError(f"Cannot fetch recent chats. {error_comment}")
         raise FetchError("Cannot fetch recent chats.")
 
     async def fetch_messages(
@@ -110,11 +124,13 @@ class ChatMethods:
             url=url,
             options={"headers": self.__client.get_headers(kwargs.get("token", None))},
         )
+        
+        response = request.json()
 
         if request.status_code == 200:
-            next_token = request.json().get("meta", {}).get("next_token", None)
+            next_token = response.get("meta", {}).get("next_token", None)
 
-            raw_turns = request.json().get("turns", [])
+            raw_turns = response.get("turns", [])
             turns = []
 
             for raw_turn in raw_turns:
@@ -126,6 +142,9 @@ class ChatMethods:
 
             return turns, next_token
 
+        if response.get("command", "") == "neo_error":
+            error_comment = response.get("comment", "")
+            raise FetchError(f"Cannot fetch messages. {error_comment}")
         raise FetchError("Cannot fetch messages.")
 
     async def fetch_all_messages(self, chat_id, pinned_only: bool = False, **kwargs: Any) -> List[Turn]:
@@ -188,12 +207,16 @@ class ChatMethods:
                 "body": json.dumps({"name": name}),
             },
         )
+        
+        response = request.json()
 
         if request.status_code == 200:
             return True
 
-        error_comment = request.json().get("comment")
-        raise UpdateError(f"Cannot update chat name. {error_comment}")
+        if response.get("command", "") == "neo_error":
+            error_comment = response.get("comment", "")
+            raise UpdateError(f"Cannot update chat name. {error_comment}")
+        raise UpdateError("Cannot update chat name.")
 
     async def archive_chat(self, chat_id: str, **kwargs: Any) -> bool:
         request = await self.__requester.request_async(
@@ -208,6 +231,10 @@ class ChatMethods:
         if request.status_code == 200:
             return True
 
+        response = request.json()
+        if response.get("command", "") == "neo_error":
+            error_comment = response.get("comment", "")
+            raise ActionError(f"Cannot archive chat. {error_comment}")
         raise ActionError("Cannot archive chat. Maybe chat is already archived or doesn't exist?")
 
     async def unarchive_chat(self, chat_id: str, **kwargs: Any) -> bool:
@@ -223,6 +250,10 @@ class ChatMethods:
         if request.status_code == 200:
             return True
 
+        response = request.json()
+        if response.get("command", "") == "neo_error":
+            error_comment = response.get("comment", "")
+            raise ActionError(f"Cannot unarchive chat. {error_comment}") 
         raise ActionError("Cannot unarchive chat. Maybe chat is not archived or doesn't exist?")
 
     async def copy_chat(self, chat_id: str, end_turn_id: str, **kwargs: Any) -> Optional[str]:
@@ -238,8 +269,11 @@ class ChatMethods:
         if request.status_code == 200:
             return request.json().get("new_chat_id", None)
 
-        error_comment = request.json().get("comment")
-        raise ActionError(f"Cannot copy chat. {error_comment}")
+        response = request.json()
+        if response.get("command", "") == "neo_error":
+            error_comment = response.get("comment", "")
+            raise ActionError(f"Cannot copy chat. {error_comment}")
+        raise ActionError("Cannot copy chat.")
 
     async def create_chat(self, character_id: str, greeting: bool = True, **kwargs: Any) -> Tuple[Chat, Optional[Turn]]:
         request_id = str(uuid.uuid4())

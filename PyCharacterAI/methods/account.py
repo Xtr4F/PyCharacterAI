@@ -134,6 +134,8 @@ class AccountMethods:
             url="https://neo.character.ai/multimodal/api/v1/voices/user",
             options={"headers": self.__client.get_headers(kwargs.get("token", None))},
         )
+        
+        response = request.json()
 
         if request.status_code == 200:
             raw_voices = request.json().get("voices", [])
@@ -144,6 +146,9 @@ class AccountMethods:
 
             return voices
 
+        if response.get("command", "") == "neo_error":
+            error_comment = response.get("comment", "")
+            raise FetchError(f"Cannot fetch your voices. {error_comment}")
         raise FetchError("Cannot fetch your voices.")
 
     async def __update_settings(self, options: Dict, **kwargs: Any) -> Dict:

@@ -35,16 +35,20 @@ class UserMethods:
             url=f"https://neo.character.ai/multimodal/api/v1/voices/search?creatorInfo.username={username}",
             options={"headers": self.__client.get_headers(kwargs.get("token", None))},
         )
+        
+        response = request.json()
 
         if request.status_code == 200:
-            raw_voices = request.json().get("voices", [])
+            raw_voices = response.get("voices", [])
             voices = []
 
             for raw_voice in raw_voices:
                 voices.append(Voice(raw_voice))
-
             return voices
 
+        if response.get("command", "") == "neo_error":
+            error_comment = response.get("comment", "")
+            raise FetchError(f"Cannot fetch user voices. {error_comment}")
         raise FetchError("Cannot fetch user voices.")
 
     async def follow_user(self, username: str, **kwargs: Any) -> bool:

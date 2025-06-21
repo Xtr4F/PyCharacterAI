@@ -213,19 +213,25 @@ class UtilsMethods:
                 "body": body,
             },
         )
+        
+
+        response = request.json()
 
         # Confirming
         if request.status_code in [200, 201]:
             try:
-                new_voice = Voice(request.json().get("voice"))
+                new_voice = Voice(response.get("voice"))
                 final_voice = await self.edit_voice(new_voice, name, description, visibility, **kwargs)
 
                 return final_voice
 
-            except Exception:
-                raise UploadError("Cannot upload voice.")
-
-        raise UploadError("Cannot upload voice. May be your audio is invalid?")
+            except Exception as ex:
+                raise UploadError(f"Cannot upload voice. {ex}")
+        
+        if response.get("command", "") == "neo_error":
+            error_comment = response.get("comment", "")
+            raise UploadError(f"Cannot upload voice. {error_comment}")
+        raise UploadError("Cannot upload voice. Maybe your audio is invalid?")
 
     async def edit_voice(
         self,
@@ -292,10 +298,16 @@ class UtilsMethods:
             },
         )
 
-        if request.status_code == 200:
-            return Voice(request.json().get("voice"))
+        response = request.json()
 
-        raise EditError("Cannot edit voice. Maybe your audio is invalid?")
+        if request.status_code != 200:
+            if response.get("command", "") == "neo_error":
+                error_comment = response.get("comment", "")
+                raise EditError(f"Cannot edit voice. {error_comment}")
+            raise EditError("Cannot edit voice. Maybe your audio is invalid?")
+
+        return Voice(request.json().get("voice"))
+
 
     async def delete_voice(self, voice_id: str, **kwargs: Any) -> bool:
         request = await self.__requester.request_async(
@@ -305,11 +317,16 @@ class UtilsMethods:
                 "headers": self.__client.get_headers(kwargs.get("token", None)),
             },
         )
+        
+        
+        if request.status_code != 200:
+            response = request.json()
+            if response.get("command", "") == "neo_error":
+                error_comment = response.get("comment", "")
+                raise DeleteError(f"Cannot delete voice. {error_comment}")
+            raise DeleteError(f"Cannot delete voice.")
 
-        if request.status_code == 200:
-            return True
-
-        raise DeleteError("Cannot delete voice.")
+        return True
 
     async def generate_speech(
         self, chat_id: str, turn_id: str, candidate_id: str, voice_id: str, **kwargs: Any
@@ -335,8 +352,9 @@ class UtilsMethods:
         response = request.json()
 
         if request.status_code != 200:
-            error = response.get("error", {}).get("message", "")
-            raise ActionError(f"Cannot generate speech. {error}")
+            if response.get("command", "") == "neo_error":
+                error_comment = response.get("comment", "")
+                raise ActionError(f"Cannot generate speech. {error_comment}")
 
         audio_url = response.get("replayUrl", "")
 
