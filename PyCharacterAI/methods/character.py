@@ -206,9 +206,9 @@ class CharacterMethods:
                 "Cannot create character. Name must be at least 3 characters and no more than 20."
             )
 
-        if len(greeting) < 3 or len(greeting) > 2048:
+        if len(greeting) < 3 or len(greeting) > 4096:
             raise InvalidArgumentError(
-                "Cannot create character. Greeting must be at least 3 characters and no more than 2048."
+                "Cannot create character. Greeting must be at least 3 characters and no more than 4096."
             )
 
         visibility = visibility.upper()
@@ -279,9 +279,9 @@ class CharacterMethods:
         if len(name) < 3 or len(name) > 20:
             raise InvalidArgumentError("Cannot edit character. Name must be at least 3 characters and no more than 20.")
 
-        if len(greeting) < 3 or len(greeting) > 2048:
+        if len(greeting) < 3 or len(greeting) > 4096:
             raise InvalidArgumentError(
-                "Cannot edit character. Greeting must be at least 3 characters and no more than 2048."
+                "Cannot edit character. Greeting must be at least 3 characters and no more than 4096."
             )
 
         visibility = visibility.upper()

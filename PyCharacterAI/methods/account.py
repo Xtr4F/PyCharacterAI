@@ -244,8 +244,8 @@ class AccountMethods:
         if len(name) < 3 or len(name) > 20:
             raise InvalidArgumentError("Cannot create persona. Name must be at least 3 characters and no more than 20.")
 
-        if definition and len(definition) > 728:
-            raise InvalidArgumentError("Cannot create persona. Definition must be no more than 728 characters.")
+        if definition and len(definition) > 750:
+            raise InvalidArgumentError("Cannot create persona. Definition must be no more than 750 characters.")
 
         request = await self.__requester.request_async(
             url="https://plus.character.ai/chat/persona/create/",
@@ -294,8 +294,8 @@ class AccountMethods:
         if name and (len(name) < 3 or len(name) > 20):
             raise InvalidArgumentError("Cannot edit persona. Name must be at least 3 characters and no more than 20.")
 
-        if definition and len(definition) > 728:
-            raise InvalidArgumentError("Cannot edit persona. Definition must be no more than 728 characters.")
+        if definition and len(definition) > 750:
+            raise InvalidArgumentError("Cannot edit persona. Definition must be no more than 750 characters.")
 
         try:
             old_persona = await self.fetch_my_persona(persona_id, **kwargs)
