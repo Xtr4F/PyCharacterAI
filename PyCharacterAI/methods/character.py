@@ -113,7 +113,7 @@ class CharacterMethods:
 
     async def fetch_character_info(self, character_id: str, **kwargs: Any) -> Character:
         request = await self.__requester.request_async(
-            url="https://plus.character.ai/chat/character/info/",
+            url="https://neo.character.ai/character/v1/get_character_info",
             options={
                 "method": "POST",
                 "headers": self.__client.get_headers(kwargs.get("token", None)),
@@ -133,16 +133,15 @@ class CharacterMethods:
 
     async def search_characters(self, character_name: str, **kwargs: Any) -> List[CharacterShort]:
         payload = {
-            '0': {
-                'json': {
-                    'searchQuery': quote(character_name)
+            "0": {
+                "json": {
+                    "searchQuery": quote(character_name)
                 }
             }
         }
-
         request = await self.__requester.request_async(
             url=f"https://character.ai/api/trpc/search.search?batch=1"
-                f"&input={json.dumps(payload, separators=(',', ':'))}",
+                f"&input={quote(json.dumps(payload, separators=(',', ':')))}",
             options={"headers": self.__client.get_headers(authorization=False)},
         )
         
