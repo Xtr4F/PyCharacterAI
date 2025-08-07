@@ -74,6 +74,7 @@ class Requester:
 
         method = options.get("method", "GET")
         headers = options.get("headers", {})
+        cookies = options.get("cookies", {})
         body = options.get("body", {})
 
         raw_response: Optional[curl_cffi.Response] = None
@@ -83,19 +84,19 @@ class Requester:
             raise RequestError
 
         if method == "GET":
-            raw_response = await self.__requester_session.get(url, headers=headers)
+            raw_response = await self.__requester_session.get(url, headers=headers, cookies=cookies)
 
         elif method == "POST":
-            raw_response = await self.__requester_session.post(url, headers=headers, data=body)
+            raw_response = await self.__requester_session.post(url, headers=headers, data=body, cookies=cookies)
 
         elif method == "PUT":
-            raw_response = await self.__requester_session.put(url, headers=headers, data=body)
+            raw_response = await self.__requester_session.put(url, headers=headers, data=body, cookies=cookies)
 
         elif method == "PATCH":
-            raw_response = await self.__requester_session.patch(url, headers=headers, data=body)
+            raw_response = await self.__requester_session.patch(url, headers=headers, data=body, cookies=cookies)
 
         elif method == "DELETE":
-            raw_response = await self.__requester_session.delete(url, headers=headers)
+            raw_response = await self.__requester_session.delete(url, headers=headers, cookies=cookies)
 
 
         if not raw_response:

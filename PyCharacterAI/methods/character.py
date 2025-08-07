@@ -139,10 +139,12 @@ class CharacterMethods:
                 }
             }
         }
+        
+        web_next_auth = kwargs.get("web_next_auth", None)
         request = await self.__requester.request_async(
             url=f"https://character.ai/api/trpc/search.search?batch=1"
-                f"&input={quote(json.dumps(payload, separators=(',', ':')))}",
-            options={"headers": self.__client.get_headers(authorization=False)},
+                f"&input={json.dumps(payload, separators=(',', ':'))}",
+            options={"cookies": {"web-next-auth": web_next_auth} if web_next_auth else {}}
         )
         
         if request.status_code == 200:
