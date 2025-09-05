@@ -275,20 +275,34 @@ class ChatMethods:
             raise ActionError(f"Cannot copy chat. {error_comment}")
         raise ActionError("Cannot copy chat.")
 
-    async def create_chat(self, character_id: str, greeting: bool = True, **kwargs: Any) -> Tuple[Chat, Optional[Turn]]:
+    async def create_chat(self, character_id: str, greeting: bool = True, preferred_model_type: Optional[str] = None, **kwargs: Any) -> Tuple[Chat, Optional[Turn]]:
+        """
+        Create a new chat with a character.
+        
+        Args:
+            character_id: The ID of the character to chat with
+            greeting: Whether to include a greeting message from the character
+            preferred_model_type: Optional model type to use for the chat (experimental, although while testing it seems fine.). Available options:
+                - MODEL_TYPE_FAST: "Meow" model (fastest)
+                - MODEL_TYPE_BALANCED: "Roar" model (default, balanced)
+                - MODEL_TYPE_SMART: "Nyan" model (smartest)
+                - MODEL_TYPE_FAMILY_FRIENDLY: "Goro" model (family-friendly)
+                - MODEL_TYPE_ROMANTIC: "Soft launch" What the name suggests.
+                - MODEL_TYPE_DEEP_SYNTH_LITE "PipSqueak" Model powered by Clawd, very strict against NSFW.
+                - MODEL_TYPE_DYNAMIC: "Dynamic" Changes model to what fits best.
+                - MODEL_TYPE_MULTILINGUAL: "Pawly" Better at languages.
+                If None, defaults to MODEL_TYPE_BALANCED
+        
+        Returns:
+            Tuple[Chat, Optional[Turn]]: The created chat and optional greeting turn
+        """
         request_id = str(uuid.uuid4())
         chat_id = str(uuid.uuid4())
 
-        # This parameter specifies which model to use when creating a new chat.
-        # This is still an experimental feature and will be fully added and documented
-        # when I am sure it is stable. Use at your own risk.
-        #
-        # At the time of this commit there are 4 models available:
-        # MODEL_TYPE_FAST - “Meow” model
-        # MODEL_TYPE_BALANCED - “Roar” model
-        # MODEL_TYPE_SMART - “Nyan” model (currently available without subscription, probably a bug)
-        # MODEL_TYPE_FAMILY_FRIENDLY - “Goro” model
-        model_type = kwargs.get("model_type")
+        model_type = preferred_model_type or "MODEL_TYPE_BALANCED"
+
+        
+        #print(model_type)
 
         request = self.__requester.ws_send_and_receive_async(
             {
@@ -336,7 +350,76 @@ class ChatMethods:
         if new_chat is None or (greeting is True and greeting_turn is None):
             raise CreateError("Cannot create a new chat.")
 
+        # Set preferred model type after chat creation if specified or use default
+        final_model_type = preferred_model_type or "MODEL_TYPE_BALANCED"
+        try:
+            await self._set_preferred_model_type_internal(new_chat.chat_id, final_model_type)
+        except Exception:
+            # Don't fail chat creation if this fails
+            pass
+
         return new_chat, greeting_turn
+
+    async def _set_preferred_model_type_internal(self, chat_id: str, model_type: str) -> bool:
+        """Internal method to set preferred model type after chat creation"""
+        try:
+            # Generate dynamic request ID
+            request_id = str(uuid.uuid4())
+            
+            # Send OPTIONS preflight request first
+            await self.__requester.request_async(
+                url=f"https://neo.character.ai/chat/{chat_id}/preferred-model-type",
+                options={
+                    "method": "OPTIONS",
+                    "headers": {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:142.0) Gecko/20100101 Firefox/142.0",
+                        "Accept": "*/*",
+                        "Accept-Language": "en-US,en;q=0.5",
+                        "Accept-Encoding": "gzip, deflate, br, zstd",
+                        "Access-Control-Request-Method": "PATCH",
+                        "Access-Control-Request-Headers": "authorization,content-type,origin-id,request-id",
+                        "Referer": "https://character.ai/",
+                        "Origin": "https://character.ai",
+                        "Connection": "keep-alive",
+                        "Sec-Fetch-Dest": "empty",
+                        "Sec-Fetch-Mode": "cors",
+                        "Sec-Fetch-Site": "same-site"
+                    }
+                }
+            )
+            
+            # Prepare headers for PATCH request
+            patch_headers = self.__client.get_headers()
+            patch_headers.update({
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:142.0) Gecko/20100101 Firefox/142.0",
+                "Accept": "application/json, text/plain, */*",
+                "Accept-Language": "en-US,en;q=0.5",
+                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "request-id": request_id,
+                "origin-id": "web-next",
+                "Origin": "https://character.ai",
+                "Connection": "keep-alive",
+                "Referer": "https://character.ai/",
+                "Sec-Fetch-Dest": "empty",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Site": "same-site",
+                "TE": "trailers"
+            })
+            
+            # Send the PATCH request
+            request = await self.__requester.request_async(
+                url=f"https://neo.character.ai/chat/{chat_id}/preferred-model-type",
+                options={
+                    "method": "PATCH",
+                    "headers": patch_headers,
+                    "body": json.dumps({"preferred_model_type": model_type})
+                }
+            )
+            
+            return request.status_code == 200
+                
+        except Exception:
+            return False
 
     async def update_primary_candidate(self, chat_id: str, turn_id, candidate_id: str, **kwargs: Any) -> bool:
         ws_message = {
