@@ -141,7 +141,7 @@ class Requester:
         
         try:
             self.__ws = await self.__requester_session.ws_connect(
-                impersonate="firefox135" or self.__impersonate,
+                impersonate="chrome" or self.__impersonate,
                 url="wss://neo.character.ai/ws/",
                 headers=self.__websocket_headers,
                 default_headers=self.__websocket_default_headers,
