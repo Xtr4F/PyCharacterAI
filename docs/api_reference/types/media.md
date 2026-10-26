@@ -29,7 +29,7 @@
 > *returns link to the avatar image.*
 > 
 > **Params**:
-> - size: (optional, default = `400`) `int` - *image size. Must be only 80, 200 or 400.*
+> - size: (optional, default = `400`) `int` - *image size. Must be only 80, 200, 250, 300 or 400.*
 > - animated: (optional, default = `False`) `bool` - *enables animation.*
 >
 > 
